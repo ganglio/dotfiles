@@ -10,7 +10,7 @@ if os.name != 'posix':
 import psutil
 
 memperc = psutil.phymem_usage().percent
-mem_dashes = "█"*round(float(memperc)/10)
-mem_empty  = "·"*(10-round(float(memperc)/10))
+mem_dashes = "█"*int(float(memperc)/10)
+mem_empty  = "·"*(10-int(float(memperc)/10))
 lines = "%s%s" % (mem_dashes,mem_empty)
 print(lines)
