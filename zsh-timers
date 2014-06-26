@@ -1,0 +1,17 @@
+#!/bin/zsh
+CURRENT_TIMESTAMP_PREEXEC=$SECONDS
+function ganglio_preexec {
+	CURRENT_TIMESTAMP_PREEXEC=$SECONDS
+}
+
+function ganglio_precmd {
+	let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
+	[[ "$ELAPSED" -gt "0" ]] && echo -e "\x1b[38;5;121m>>> $ELAPSED$reset"
+}
+
+# Load required functions.
+autoload -Uz add-zsh-hook
+
+# Add hook for calling git-info before each command.
+add-zsh-hook preexec ganglio_preexec
+add-zsh-hook precmd ganglio_precmd

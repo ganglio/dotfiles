@@ -1,0 +1,5 @@
+#!/bin/zsh
+
+vmc=$(ps ax | grep '[V]BoxHeadless' | wc -l)
+echo -n ${(l:${vmc}::ᐯ:)}
+

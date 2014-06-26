@@ -1,0 +1,2 @@
+alias gitroot='cd ./$(git rev-parse --show-cdup)'
+alias gitk='gitk --all'
