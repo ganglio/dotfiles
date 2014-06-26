@@ -13,7 +13,7 @@ source ~/.dotfiles/zsh-hooks
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 unsetopt correct_all
-eval `dircolors ~/.dircolors`
+eval `dircolors ~/.dotfiles/colors/solarized`
 export EDITOR='vim'
 
 export TERM=xterm-256color
