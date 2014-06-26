@@ -1,10 +1,14 @@
 #!/bin/bash
 
 echo "Cloning dotfiles"
-git clone git@github.com:ganglio/dotfiles.git .dotfiles
+git clone https://github.com/ganglio/dotfiles.git .dotfiles
 
 echo "Cloning oh-my-zsh"
-git clone git://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
+git clone https://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
+
+echo "Creating backup files"
+cp ~/.zshrc ~/.zshrc.orig
+cp ~/.zcompdump ~/.zcompdump.orig
 
 echo "Creating symlinks"
 ln -s ~/.dotfiles/zshrc ~/.zshrc

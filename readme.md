@@ -2,4 +2,4 @@
 
 ##Setup
 
-<todo>
+curl -l https://raw.githubusercontent.com/ganglio/dotfiles/master/install.sh | sh
