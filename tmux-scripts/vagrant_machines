@@ -1,4 +1,5 @@
 #!/bin/zsh
+# vim: set fileencoding=utf-8 :
 
 vmc=$(ps ax | grep '[V]BoxHeadless' | wc -l)
 echo -n ${(l:${vmc}::ᐯ:)}
