@@ -7,7 +7,7 @@ plugins=(git rails ruby git-flow vagrant)
 source $ZSH/oh-my-zsh.sh
 
 if [ -d ~/.dotfiles/zsh.conf ]; then
-	for $conf_file in `ls ~/.dotfiles/zsh.conf`; do
+	for conf_file in `ls ~/.dotfiles/zsh.conf`; do
 		source ~/.dotfiles/zsh.conf/$conf_file
 	done
 fi
