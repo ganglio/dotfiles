@@ -17,7 +17,7 @@ if [ -d ~/.dotfiles/zsh.conf ]; then
 	fi
 fi
 
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:~/.dotfiles/bin
 
 unsetopt correct_all
 eval `dircolors ~/.dotfiles/colors/solarized`

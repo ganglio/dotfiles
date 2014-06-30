@@ -6,7 +6,7 @@ function ganglio_preexec {
 
 function ganglio_precmd {
 	let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
-	[[ "$ELAPSED" -gt "0" ]] && echo -e "\x1b[38;5;121m>>> $ELAPSED$reset"
+	[[ "$ELAPSED" -gt "0" ]] && echo -e "\x1b[38;5;121m>>> $ELAPSED\x1b[0m"
 }
 
 # Load required functions.
