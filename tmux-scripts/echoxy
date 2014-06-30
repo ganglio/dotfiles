@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
+
+from blessings import Terminal
+
+term = Terminal()
+with term.location(0,0):
+	print("gugu")
