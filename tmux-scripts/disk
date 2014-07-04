@@ -9,24 +9,14 @@ if os.name != 'posix':
 
 import psutil
 import time
-
-def b2h(n):
-	symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
-	prefix = {}
-	for i, s in enumerate(symbols):
-		prefix[s] = 1 << (i + 1) * 10
-	for s in reversed(symbols):
-		if n >= prefix[s]:
-			value = float(n) / prefix[s]
-			return '%.1f%s' % (value, s)
-	return "%sB" % n
+from lib import *
 
 disk_before = psutil.disk_io_counters()
 time.sleep(0.1)
 disk_after = psutil.disk_io_counters()
 
-written_bytes = b2h(disk_after.write_bytes - disk_before.write_bytes)
-read_bytes    = b2h(disk_after.read_bytes  - disk_before.read_bytes)
+written_bytes = sparkle("/tmp/diskreadhistory",str(disk_after.write_bytes - disk_before.write_bytes))
+read_bytes    = sparkle("/tmp/diskwritehistory",str(disk_after.read_bytes  - disk_before.read_bytes))
 
 if (len(sys.argv)>1 and sys.argv[1]=="read"):
 	print("%s" % read_bytes)
@@ -34,10 +24,3 @@ elif (len(sys.argv)>1 and sys.argv[1]=="write"):
 	print("%s" % written_bytes)
 else:
 	print("%s|%s" % (written_bytes,read_bytes))
-
-'''
-cpu_dashes = "█"*int(float(cpuperc)/10)
-cpu_empty  = "·"*(10-int(float(cpuperc)/10))
-lines = "%s%s" % (cpu_dashes,cpu_empty)
-print(lines)
-'''

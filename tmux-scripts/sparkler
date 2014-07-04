@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
+
+import os
+import sys
+
+if os.name != 'posix':
+	sys.exit('platform not supported')
+
+import psutil
+from lib import *
+
+cpuperc = "%d " % int(float(psutil.cpu_percent(interval=0.1))/10)
+cpustats = sparkle("/tmp/cpuhistory",cpuperc)
+
+print(cpustats)
