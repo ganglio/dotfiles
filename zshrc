@@ -1,10 +1,12 @@
 ZSH=$HOME/.oh-my-zsh
 
-ZSH_THEME="avit"
+ZSH_THEME="agnoster"
 
 plugins=(git rails ruby git-flow vagrant)
 
 source $ZSH/oh-my-zsh.sh
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:~/.dotfiles/bin
 
 if [ -d ~/.dotfiles/zsh.conf ]; then
 	for conf_file in `ls ~/.dotfiles/zsh.conf`; do
@@ -17,10 +19,8 @@ if [ -d ~/.dotfiles/zsh.conf ]; then
 	fi
 fi
 
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:~/.dotfiles/bin
-
 unsetopt correct_all
-eval `dircolors ~/.dotfiles/colors/solarized`
+# eval `dircolors ~/.dotfiles/colors/solarized`
 export EDITOR='vim'
 
 export TERM=xterm-256color
