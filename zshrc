@@ -28,8 +28,3 @@ export EDITOR='vim'
 export TERM=xterm-256color
 
 eval "$(rbenv init -)"
-
-export VAULT_HOME=~/Vault
-export AWS_ACCESS_KEY="***REMOVED***"
-export AWS_SECRET_KEY="***REMOVED***"
-export PATH=$PATH:$VAULT_HOME/bin
