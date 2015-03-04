@@ -19,12 +19,8 @@ if [ -d ~/.dotfiles/zsh.conf ]; then
 	fi
 fi
 
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:~/.dotfiles/bin:~/.rbenv/bin
-
 unsetopt correct_all
 # eval `dircolors ~/.dotfiles/colors/solarized`
 export EDITOR='vim'
 
 export TERM=xterm-256color
-
-eval "$(rbenv init -)"
