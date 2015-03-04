@@ -2,7 +2,7 @@ ZSH=$HOME/.oh-my-zsh
 
 ZSH_THEME="agnoster"
 
-plugins=(git rails ruby git-flow vagrant)
+plugins=(git gem vagrant jump pyenv rbenv pip composer ffmpeg brew)
 
 source $ZSH/oh-my-zsh.sh
 
