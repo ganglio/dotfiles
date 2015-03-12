@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+require 'set'
+
+rows,columns = `stty size`.scan(/\d+/).map{|x| x.to_i}
+
+# ruby 1.8.x compatible way to say "\u2743"
+Flake = ["2743".to_i(16)].pack("U*")
+# Shapes from far away to still closer
+Snow = ['.','*',Flake]
+
+# flake state descriptor
+FlakeState = Struct.new(:row, :speed, :shape)
+
+# this will map column to a flake [row, speed]
+snow_progress = {}
+
+# available columns (initially all columns are available)
+avail = Set.new 1..columns
+
+# clear terminal
+puts "\033[2J"
+
+# terminal positioning
+def char_at(char,row,col) ; "\033[#{row};#{col}H#{char}" ; end
+
+# infinite blizzard loop
+loop do
+  # pick a random available column
+  column = avail.to_a[ rand( avail.size ) ]
+  # remove it from available columns
+  avail.delete column
+  # give a snowflake some random speed
+  speed = rand( Snow.size )+1
+  # chose a shape based on speed
+  shape = Snow[speed-1]
+  # initialize this particular snowflake
+  snow_progress[ column ] = FlakeState.new 0,speed,shape
+  # loop over all active snowflakes (clone the hash so we can edit it as we go)
+  snow_progress.clone.each do |column, flake|
+    # clear previous snowflake image
+    print char_at(' ',flake.row,column) if flake.row > 0
+    # update snowflake model
+    flake.row += flake.speed
+    # if still falling
+    if flake.row < rows
+      # draw its shape
+      print char_at(flake.shape,flake.row,column)
+    else
+      # on the ground always draw the Flake
+      print char_at(Flake,rows,column)
+      # make its column available again
+      avail << column
+      # and remove the snowflake from simulation
+      snow_progress.delete column
+    end
+    # move the terminal cursor away
+    print char_at('',0,0)
+  end
+  # ruby 1.8.x buffers stdout by default, flush the current animation frame
+  $stdout.flush
+  # ~17 FPS
+  sleep 0.06
+end

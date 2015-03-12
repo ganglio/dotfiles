@@ -9,5 +9,5 @@ set list
 set listchars=tab:——,trail:·
 highlight MyTabs ctermbg=NONE ctermfg=235
 match MyTabs /\t/
-colorscheme slate
+" colorscheme slate
 au BufReadPost Vagrantfile set syntax=ruby
