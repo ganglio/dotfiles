@@ -87,7 +87,9 @@ prompt_git() {
       mode=" >R>"
     fi
 
-		ahead=$(git status 2> /dev/null | grep ahead | awk '{print " "$8;}')
+		if [[ "$(git status 2> /dev/null | grep ahead | awk '{print $8;}')" != "" ]]; then
+			ahead=" ⍆"
+		fi
 
     setopt promptsubst
     autoload -Uz vcs_info
