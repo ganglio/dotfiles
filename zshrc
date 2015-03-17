@@ -1,8 +1,9 @@
 ZSH=$HOME/.oh-my-zsh
+ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
 
-ZSH_THEME="agnoster"
+ZSH_THEME="gagnoster"
 
-plugins=(git gem vagrant jump pyenv rbenv pip composer ffmpeg brew)
+plugins=(git gem vagrant jump pyenv rbenv pip composer ffmpeg brew npm)
 
 source $ZSH/oh-my-zsh.sh
 
