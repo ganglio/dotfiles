@@ -70,6 +70,7 @@ prompt_git() {
   local ref dirty mode repo_path
   repo_path=$(git rev-parse --git-dir 2>/dev/null)
 
+
   if $(git rev-parse --is-inside-work-tree >/dev/null 2>&1); then
     dirty=$(parse_git_dirty)
     ref=$(git symbolic-ref HEAD 2> /dev/null) || ref="➦ $(git show-ref --head -s --abbrev |head -n1 2> /dev/null)"
@@ -91,6 +92,10 @@ prompt_git() {
 			ahead=" ⍆"
 		fi
 
+		if [[ "$(git stash list)" != "" ]]; then
+			stash=" S"
+		fi
+
     setopt promptsubst
     autoload -Uz vcs_info
 
@@ -102,7 +107,7 @@ prompt_git() {
     zstyle ':vcs_info:*' formats ' %u%c'
     zstyle ':vcs_info:*' actionformats ' %u%c'
     vcs_info
-    echo -n "${ref/refs\/heads\// }${vcs_info_msg_0_%% }${mode}${ahead}"
+    echo -n "${ref/refs\/heads\// }${vcs_info_msg_0_%% }${mode}${ahead}${stash}"
   fi
 }
 
