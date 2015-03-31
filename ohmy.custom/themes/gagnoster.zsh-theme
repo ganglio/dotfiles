@@ -124,7 +124,7 @@ rprompt_battery() {
 	if [[ "$OSTYPE" = darwin* ]]; then
 		local smart_battery_status="$(ioreg -rc "AppleSmartBattery")"
 		local plugged charge symbol
-		
+
 		typeset -F maxcapacity=$(echo $smart_battery_status | grep '^.*"MaxCapacity"\ =\ ' | sed -e 's/^.*"MaxCapacity"\ =\ //')
 		typeset -F currentcapacity=$(echo $smart_battery_status | grep '^.*"CurrentCapacity"\ =\ ' | sed -e 's/^.*CurrentCapacity"\ =\ //')
 		plugged=$(echo $smart_battery_status | grep '^.*"ExternalConnected"\ =\ ' | sed -e 's/^.*"ExternalConnected"\ =\ //')

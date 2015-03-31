@@ -2,8 +2,10 @@
 
 CURRENT_BG='NONE'
 SEGMENT_SEPARATOR=''
+SEGMENT_SEPARATOR_SAME=''
 RCURRENT_BG='NONE'
 RSEGMENT_SEPARATOR=''
+RSEGMENT_SEPARATOR_SAME=''
 
 # Begin a segment
 # Takes two arguments, background and foreground. Both can be omitted,
@@ -16,6 +18,8 @@ if [[ -n $IS_TMUX_STATUS ]]; then # this is TMUX
 		[[ -n $2 ]] && fg="#[fg=$2]" || fg="#[fg=default]"
 		if [[ $CURRENT_BG != 'NONE' && $1 != $CURRENT_BG ]]; then
 			echo -n " $bg#[fg=$CURRENT_BG]$SEGMENT_SEPARATOR$fg "
+		elif [[ $1 == $CURRENT_BG ]]; then
+			echo -n " $bg#[fg=$2]$SEGMENT_SEPARATOR_SAME$fg "
 		else
 			echo -n "$bg$fg "
 		fi
@@ -41,6 +45,8 @@ if [[ -n $IS_TMUX_STATUS ]]; then # this is TMUX
 		[[ -n $2 ]] && fg="#[fg=$2]" || fg="#[fg=default]"
 		if [[ $RCURRENT_BG != 'NONE' && $1 != $RCURRENT_BG ]]; then
 			echo -n " #[fg=$1]#[bg=$RCURRENT_BG]$RSEGMENT_SEPARATOR"
+		elif [[ $1 == $RCURRENT_BG ]]; then
+			echo -n " #[fg=$2]#[bg=$RCURRENT_BG]$RSEGMENT_SEPARATOR_SAME"
 		else
 			echo -n "#[fg=$1]$RSEGMENT_SEPARATOR"
 		fi
@@ -69,6 +75,8 @@ else # this is a shell
 		[[ -n $2 ]] && fg="%F{$2}" || fg="%f"
 		if [[ $CURRENT_BG != 'NONE' && $1 != $CURRENT_BG ]]; then
 			echo -n " %{$bg%F{$CURRENT_BG}%}$SEGMENT_SEPARATOR%{$fg%} "
+		elif [[ $1 == $CURRENT_BG ]]; then
+			echo -n " %{$bg%F{$2}%}$SEGMENT_SEPARATOR_SAME%{$fg%} "
 		else
 			echo -n "%{$bg%}%{$fg%} "
 		fi
@@ -94,6 +102,8 @@ else # this is a shell
 		[[ -n $2 ]] && fg="%F{$2}" || fg="%f"
 		if [[ $RCURRENT_BG != 'NONE' && $1 != $RCURRENT_BG ]]; then
 			echo -n " %F{$1}%K{$RCURRENT_BG}$RSEGMENT_SEPARATOR"
+		elif [[ $1 == $RCURRENT_BG ]]; then
+			echo -n " %F{$2}#K{$RCURRENT_BG}$RSEGMENT_SEPARATOR_SAME"
 		else
 			echo -n "%F{$1}$RSEGMENT_SEPARATOR"
 		fi
