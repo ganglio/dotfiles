@@ -1,0 +1,9 @@
+#!/bin/zsh
+
+typeset -F totalmem=$(sysctl -a | grep "memsize =" | awk '{print $3}')
+typeset -F usedmem=$(sysctl -a | grep "physmem =" | awk '{print $3}')
+integer percentage=$(((usedmem/totalmem) * 100))
+
+bar=${(l.($percentage/10)..■.)}${(l.(10-$percentage/10)..╌.)}
+
+echo -n $bar
