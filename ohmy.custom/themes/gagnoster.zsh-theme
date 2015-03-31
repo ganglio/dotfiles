@@ -27,6 +27,8 @@
 
 CURRENT_BG='NONE'
 SEGMENT_SEPARATOR=''
+RCURRENT_BG='NONE'
+RSEGMENT_SEPARATOR=''
 
 # Begin a segment
 # Takes two arguments, background and foreground. Both can be omitted,
@@ -54,6 +56,8 @@ prompt_end() {
 	echo -n "%{%f%}"
 	CURRENT_BG=''
 }
+
+
 
 ### Prompt components
 # Each component will draw itself, and hide itself if no information needs to be shown
@@ -160,4 +164,77 @@ build_prompt() {
 	prompt_end
 }
 
+# Right prompt. If any
+
+rprompt_segment() {
+	local bg fg
+	[[ -n $1 ]] && bg="%K{$1}" || bg="%k"
+	[[ -n $2 ]] && fg="%F{$2}" || fg="%f"
+	# if [[ $RCURRENT_BG != 'NONE' && $1 != $RCURRENT_BG ]]; then
+	# 	echo -n " %{$bg%F{$RCURRENT_BG}%}$RSEGMENT_SEPARATOR%{$fg%} "
+	# else
+	# 	echo -n " %{$bg%}%{$fg%} "
+	# fi
+	# echo $mex
+	# RCURRENT_BG=$1
+	if [[ $RCURRENT_BG != 'NONE' && $1 != $RCURRENT_BG ]]; then
+		echo -n " %F{$1}%K{$RCURRENT_BG}$RSEGMENT_SEPARATOR"
+	else
+		echo -n "%F{$1}$RSEGMENT_SEPARATOR"
+	fi
+	echo -n "%{$fg%}%{$bg%} $3"
+
+	RCURRENT_BG=$1
+}
+
+rprompt_end() {
+	if [[ -n $RCURRENT_BG ]]; then
+		echo -n "%{%f%K{$RCURRENT_BG}%} "
+	else
+		echo -n "%{%f%}"
+	fi
+	echo -n "%{%k%}"
+	RCURRENT_BG=''
+}
+
+rprompt_battery() {
+	if [[ "$OSTYPE" = darwin* ]]; then
+		local smart_battery_status="$(ioreg -rc "AppleSmartBattery")"
+		local plugged charge symbol
+		
+		typeset -F maxcapacity=$(echo $smart_battery_status | grep '^.*"MaxCapacity"\ =\ ' | sed -e 's/^.*"MaxCapacity"\ =\ //')
+		typeset -F currentcapacity=$(echo $smart_battery_status | grep '^.*"CurrentCapacity"\ =\ ' | sed -e 's/^.*CurrentCapacity"\ =\ //')
+		plugged=$(echo $smart_battery_status | grep '^.*"ExternalConnected"\ =\ ' | sed -e 's/^.*"ExternalConnected"\ =\ //')
+		integer charge=$(((currentcapacity/maxcapacity) * 100))
+
+		if [[ $plugged != "Yes" ]]; then
+			symbol='🔋 '
+		else
+			symbol="🔌 "
+		fi
+
+		if [[ $charge -gt 50 ]]; then
+			color='green'
+		elif [[ $charge -gt 25 ]]; then
+			color='yellow'
+		else
+			color='red'
+		fi
+
+		if [[ $color != 'red' ]]; then
+			bar=${(l.($charge/10)..━.)}${(l.(10-$charge/10)..┄.)}
+		else
+			bar="$charge%%"
+		fi
+
+		rprompt_segment $color black "$symbol $bar"
+	fi
+}
+
+build_rprompt() {
+	rprompt_battery
+	rprompt_end
+}
+
 PROMPT='%{%f%b%k%}$(build_prompt) '
+RPROMPT='$(build_rprompt)'
