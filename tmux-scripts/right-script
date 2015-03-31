@@ -3,8 +3,8 @@
 IS_TMUX_STATUS="TRUE"
 source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 
-rprompt_segment yellow black "$(~/.dotfiles/bin/mem)"
-rprompt_segment green black "$(~/.dotfiles/bin/cpu)"
+rprompt_segment black yellow "$(~/.dotfiles/bin/mem)"
+rprompt_segment black green "$(~/.dotfiles/bin/cpu)"
 [[ -n "$(~/.dotfiles/bin/vagrant-machines)" ]] && rprompt_segment cyan black "$(~/.dotfiles/bin/vagrant-machines)"
 rprompt_segment black white "$(date '+%H:%M:%S')"
 rprompt_segment black blue "$(date '+%Y-%m-%d')"

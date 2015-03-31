@@ -3,6 +3,6 @@
 IS_TMUX_STATUS="TRUE"
 source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 
-prompt_segment yellow black '#T'
-[[ -n "$(~/.dotfiles/bin/ssid)" ]] && prompt_segment red black "$(~/.dotfiles/bin/ssid)"
+prompt_segment black yellow '#T'
+[[ -n "$(~/.dotfiles/bin/ssid)" ]] && prompt_segment black red "$(~/.dotfiles/bin/ssid)"
 prompt_end

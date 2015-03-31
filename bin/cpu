@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-integer percentage=100-$(iostat | tail -n 1 | awk '{print $6}')
+integer percentage=100-$(top -l 1 -n 0 | grep idle | awk '{print $7}' | sed 's/%//')
 
 bar=${(l.($percentage/10)..■.)}${(l.(10-$percentage/10)..╌.)}
 
