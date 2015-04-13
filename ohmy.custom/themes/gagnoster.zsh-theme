@@ -1,26 +1,14 @@
 # vim:ft=zsh ts=2 sw=2 sts=2
 #
-# agnoster's Theme - https://gist.github.com/3712874
-# A Powerline-inspired theme for ZSH
+# gagnoster theme
+# based in the fantastic agnoster one - https://gist.github.com/3712874
 #
-# # README
+# # Features
 #
-# In order for this theme to render correctly, you will need a
-# [Powerline-patched font](https://github.com/Lokaltog/powerline-fonts).
-#
-# In addition, I recommend the
-# [Solarized theme](https://github.com/altercation/solarized/) and, if you're
-# using it on Mac OS X, [iTerm 2](http://www.iterm2.com/) over Terminal.app -
-# it has significantly better color fidelity.
-#
-# # Goals
-#
-# The aim of this theme is to only show you *relevant* information. Like most
-# prompts, it will only show git information when in a git working directory.
-# However, it goes a step further: everything from the current user and
-# hostname to whether the last call exited with an error to whether background
-# jobs are running in this shell will all be displayed automatically when
-# appropriate.
+# The prompt segment function as been generalised to work on both the prompt and on the TMUX status line.
+# A rprompt segment function has been added to handle the right prompt.
+# Exceptions have been added to properly handle two segments in a row with the same background.
+# Added the pending actions status to the git prompt and removed the support for mercurial as I think is useless :P
 
 source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 
@@ -120,7 +108,7 @@ prompt_status() {
 }
 
 # Battery widget for Mac
-rprompt_battery() {
+prompt_battery() {
 	if [[ "$OSTYPE" = darwin* ]]; then
 		local smart_battery_status="$(ioreg -rc "AppleSmartBattery")"
 		local plugged charge symbol
@@ -150,7 +138,7 @@ rprompt_battery() {
 			bar="$charge%%"
 		fi
 
-		rprompt_segment $color black "$symbol $bar"
+		prompt_segment black $color "$symbol $bar"
 	fi
 }
 
@@ -165,10 +153,13 @@ build_prompt() {
 	prompt_end
 }
 
-build_rprompt() {
-	rprompt_battery
-	rprompt_end
+build_rprompt() {}
+
+build_status() {
+	prompt_battery
+	prompt_end
 }
 
-PROMPT='%{%f%b%k%}$(build_prompt) '
-RPROMPT='$(build_rprompt)'
+PROMPT='%{%f%b%k%}$(build_prompt) %{%f%b%k%}'
+RPROMPT='%{%f%b%k%}$(build_rprompt)%{%f%b%k%}'
+STATUS_LINE='$(build_status)'

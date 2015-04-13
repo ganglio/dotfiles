@@ -1,10 +1,22 @@
-#!/bin/zsh
+#!/usr/bin/env ruby
+# encoding: utf-8
 
-thetop=$(top -l 1 -n 0 | grep "PhysMem:")
-typeset -F usedmem=$(echo $thetop | awk '{print $2}' | sed 's/M//')
-typeset -F unusedmem=$(echo $thetop | awk '{print $6}' | sed 's/M//')
-integer percentage=$(((usedmem/(usedmem+unusedmem)) * 100))
+# By Uğur Özyılmazel, @vigobronx | @ugurozyilmazel
+# http://vigodome.com | http://ugur.ozyilmazel.com | http://github.com/vigo
 
-bar=${(l.($percentage/10)..■.)}${(l.(10-$percentage/10)..╌.)}
+def get_paged_memory_usage(match_string, paging=4096)
+	mvar = 3
+	if match_string.split(/[^\w]/).length > 1
+		jmvar = 4
+	end
+	paged_val = `vm_stat | grep "Pages #{match_string}:" | awk '{ print $#{mvar}}'`.to_i
+	gigabyte_val = (paged_val * paging) / 1024 / 1024 / 1024.0
+end
 
-echo -n $bar
+installed_memory = `sysctl -n hw.memsize`.to_i / 1024 / 1024 / 1024.0
+total_consumed = 0
+['wired down', 'active', 'inactive'].each { |key| total_consumed += get_paged_memory_usage(key) }
+
+percentage = 100*total_consumed/installed_memory
+bar = "■"*(percentage/10)+"╌"*(10-percentage/10)
+printf(bar)

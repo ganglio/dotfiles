@@ -12,6 +12,18 @@ RSEGMENT_SEPARATOR_SAME=''
 # rendering default background/foreground.
 
 if [[ -n $IS_TMUX_STATUS ]]; then # this is TMUX
+
+	# Renders a full line
+	prompt_fullline() {
+		local bg
+
+		[[ -n $1 ]] && bg="#[bg=$1]" || bg="#[bg=default]"
+		line=${(l.$COLUMNS..X.)}
+		echo -n "$bg$line"
+
+		CURRENT_BG=$1
+	}
+
 	prompt_segment() {
 		local bg fg
 		[[ -n $1 ]] && bg="#[bg=$1]" || bg="#[bg=default]"
@@ -121,6 +133,18 @@ else # this is a shell
 		fi
 		echo -n "%{%k%}"
 		RCURRENT_BG=''
+	}
+
+	putcur() {
+		echo -e -n "\033[s"
+	}
+
+	popcur() {
+		echo -e -n "\033[u"
+	}
+
+	gotop() {
+		echo -e -n "\033[H"
 	}
 
 fi
