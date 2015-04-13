@@ -1,7 +1,7 @@
 # vim:ft=zsh ts=2 sw=2 sts=2
 #
 # gagnoster theme
-# based in the fantastic agnoster one - https://gist.github.com/3712874
+# based on the fantastic agnoster one - https://gist.github.com/3712874
 #
 # # Features
 #
@@ -57,13 +57,9 @@ prompt_git() {
 			mode=" >R>"
 		fi
 
-		if [[ "$(git status 2> /dev/null | grep ahead | awk '{print $8;}')" != "" ]]; then
-			ahead=" ⍆"
-		fi
+		[[ "$(git status 2> /dev/null | grep ahead | awk '{print $8;}')" != "" ]] && ahead=" ⍆"
 
-		if [[ "$(git stash list)" != "" ]]; then
-			stash=" ︷"
-		fi
+		[[ "$(git stash list)" != "" ]] && stash=" ︷"
 
 		setopt promptsubst
 		autoload -Uz vcs_info
