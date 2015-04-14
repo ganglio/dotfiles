@@ -8,13 +8,6 @@ function ganglio_precmd {
 	local stl
 	let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
 	[[ "$ELAPSED" -gt "0" ]] && echo -e "\x1b[38;5;121m>>> $ELAPSED\x1b[0m"
-	if [[ -n $STATUS_LINE ]]; then
-		putcur
-		gotop
-		stl=$(eval echo -e $STATUS_LINE | sed "s/%[{}]//g" | sed "s/%f/\$fg[default]/g" | sed "s/%k/\$bg[default]/g" | sed "s/%F{/\$fg[/g" | sed "s/%K{/\$bg[/g" | sed "s/}/]/g")
-		eval echo $stl
-		popcur
-	fi
 }
 
 # Load required functions.

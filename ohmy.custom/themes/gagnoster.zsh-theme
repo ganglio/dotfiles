@@ -103,41 +103,6 @@ prompt_status() {
 	[[ -n "$symbols" ]] && prompt_segment black default "$symbols"
 }
 
-# Battery widget for Mac
-prompt_battery() {
-	if [[ "$OSTYPE" = darwin* ]]; then
-		local smart_battery_status="$(ioreg -rc "AppleSmartBattery")"
-		local plugged charge symbol
-
-		typeset -F maxcapacity=$(echo $smart_battery_status | grep '^.*"MaxCapacity"\ =\ ' | sed -e 's/^.*"MaxCapacity"\ =\ //')
-		typeset -F currentcapacity=$(echo $smart_battery_status | grep '^.*"CurrentCapacity"\ =\ ' | sed -e 's/^.*CurrentCapacity"\ =\ //')
-		plugged=$(echo $smart_battery_status | grep '^.*"ExternalConnected"\ =\ ' | sed -e 's/^.*"ExternalConnected"\ =\ //')
-		integer charge=$(((currentcapacity/maxcapacity) * 100))
-
-		if [[ $plugged != "Yes" ]]; then
-			symbol='🔋 '
-		else
-			symbol="🔌 "
-		fi
-
-		if [[ $charge -gt 50 ]]; then
-			color='green'
-		elif [[ $charge -gt 25 ]]; then
-			color='yellow'
-		else
-			color='red'
-		fi
-
-		if [[ $color != 'red' ]]; then
-			bar=${(l.($charge/10)..━.)}${(l.(10-$charge/10)..┄.)}
-		else
-			bar="$charge%%"
-		fi
-
-		prompt_segment black $color "$symbol $bar"
-	fi
-}
-
 ## Main prompt
 build_prompt() {
 	RETVAL=$?
@@ -151,11 +116,5 @@ build_prompt() {
 
 build_rprompt() {}
 
-build_status() {
-	prompt_battery
-	prompt_end
-}
-
 PROMPT='%{%f%b%k%}$(build_prompt) %{%f%b%k%}'
 RPROMPT='%{%f%b%k%}$(build_rprompt)%{%f%b%k%}'
-STATUS_LINE='$(build_status)'
