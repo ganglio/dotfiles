@@ -17,7 +17,7 @@ rprompt_battery() {
 		if [[ $plugged != "Yes" ]]; then
 			symbol='🔋 '
 		else
-			symbol='🔌 '
+			symbol=''
 		fi
 
 		if [[ $charge -gt 50 ]]; then
@@ -29,7 +29,7 @@ rprompt_battery() {
 		fi
 
 		if [[ $color != 'red' ]]; then
-			bar=${(l.($charge/10)..━.)}${(l.(10-$charge/10)..┄.)}
+			bar=${(l.($charge/10)..■.)}${(l.(10-$charge/10)..╌.)}
 		else
 			bar="$charge%%"
 		fi
