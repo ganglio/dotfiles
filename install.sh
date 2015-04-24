@@ -1,6 +1,6 @@
 #!/bin/bash
 
-now=(date +%Y%m%d-%H%M%S)
+now=$(date +%Y%m%d-%H%M%S)
 
 echo "Creating backup files"
 [ -f ~/.zshrc ] && cp ~/.zshrc ~/.zshrc.orig.$now
