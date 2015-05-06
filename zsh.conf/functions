@@ -15,3 +15,20 @@ function shade {
 		*) echo -e "\033[41m \033[0m" ;;
 	esac
 }
+
+function set_tmux_env() {
+	if [[ $# -lt 2 ]]; then
+		echo "Usage:\n$0 <key> <value>"
+		return 1
+	fi
+	tmux setenv $1 $2
+}
+
+function get_tmux_env() {
+	if [[ $# -lt 1 ]]; then
+		echo "Usage:\n$0 <key>"
+		return 1
+	fi
+	keyval=$(tmux showenv $1 2> /dev/null | awk -F '=' '{print $1}')
+	echo $keyval
+}
