@@ -1,0 +1,16 @@
+#!/bin/zsh
+
+IS_TMUX_STATUS="TRUE"
+IS_CENTER="TRUE"
+source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
+
+for win in $(tmux list-windows | awk '{print $1$2}'); do
+	case $win in
+		*#*)  FG="red";  BG="black";;
+		*\**) FG="white";  BG="blue";;
+		*-*)  FG="yellow"; BG="black";;
+		*)    FG="white";  BG="black";;
+	esac
+	prompt_segment $BG $FG "$(echo $win | sed "s/[#*-]//g")"
+done
+prompt_end

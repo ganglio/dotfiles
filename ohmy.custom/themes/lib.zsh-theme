@@ -7,6 +7,13 @@ RCURRENT_BG='NONE'
 RSEGMENT_SEPARATOR=''
 RSEGMENT_SEPARATOR_SAME=''
 
+if [[ -n $IS_CENTER ]]; then # is this in the middle of the powerline?
+	SEGMENT_SEPARATOR='▌'
+	SEGMENT_SEPARATOR_SAME='│'
+	RSEGMENT_SEPARATOR='▐'
+	RSEGMENT_SEPARATOR_SAME='│'
+fi
+
 # Begin a segment
 # Takes two arguments, background and foreground. Both can be omitted,
 # rendering default background/foreground.

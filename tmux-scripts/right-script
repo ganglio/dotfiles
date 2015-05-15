@@ -12,10 +12,10 @@ rprompt_battery() {
 		typeset -F maxcapacity=$(echo $smart_battery_status | grep '^.*"MaxCapacity"\ =\ ' | sed -e 's/^.*"MaxCapacity"\ =\ //')
 		typeset -F currentcapacity=$(echo $smart_battery_status | grep '^.*"CurrentCapacity"\ =\ ' | sed -e 's/^.*CurrentCapacity"\ =\ //')
 		plugged=$(echo $smart_battery_status | grep '^.*"ExternalConnected"\ =\ ' | sed -e 's/^.*"ExternalConnected"\ =\ //')
-		integer charge=$(((currentcapacity/maxcapacity) * 100))
+		typeset -F charge=$(((currentcapacity/maxcapacity) * 100))
 
 		if [[ $plugged != "Yes" ]]; then
-			symbol='🔋 '
+			symbol='🔋  '
 		else
 			symbol=''
 		fi
@@ -34,7 +34,7 @@ rprompt_battery() {
 			bar="$charge%%"
 		fi
 
-		rprompt_segment black $color "$symbol $bar"
+		rprompt_segment black $color "$symbol$(printf "%2.2f%%" $charge)"
 	fi
 }
 

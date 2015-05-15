@@ -5,4 +5,5 @@ typeset -F percentage=100-$(top -l 1 -n 0 | grep idle | awk '{print $7}' | sed "
 
 bar=${(l.($percentage/10)..■.)}${(l.(10-$percentage/10)..╌.)}
 
-echo -n $bar
+#echo -n $bar
+printf "%2.2f%%" $percentage

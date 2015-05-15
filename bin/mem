@@ -19,4 +19,5 @@ total_consumed = 0
 
 percentage = 100*total_consumed/installed_memory
 bar = "■"*(percentage/10)+"╌"*(10-percentage/10)
-printf(bar)
+printf("%2.2f%%",percentage)
+#printf(bar)
