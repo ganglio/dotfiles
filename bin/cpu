@@ -1,9 +1,5 @@
-#!/bin/zsh
+#!/usr/bin/env python3
 
-# integer percentage=100-$(top -l 1 -n 0 | grep idle | awk '{print $7}' | sed 's/%//')
-typeset -F percentage=100-$(top -l 1 -n 0 | grep idle | awk '{print $7}' | sed "s/%//")
-
-bar=${(l.($percentage/10)..■.)}${(l.(10-$percentage/10)..╌.)}
-
-#echo -n $bar
-printf "%2.2f%%" $percentage
+import psutil
+cpu = psutil.cpu_percent(interval=5, percpu=False)
+print("%2.2f%%" % cpu,end="")

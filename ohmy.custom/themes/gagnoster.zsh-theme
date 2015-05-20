@@ -17,7 +17,7 @@ source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 
 # Context: user@hostname (who am I and where am I)
 prompt_context() {
-	if [[ "$USER" != "$DEFAULT_USER" || -n "$SSH_CLIENT" ]]; then
+	if [[ "$USER" != "$DEFAULT_USER" && -n "$SSH_CLIENT" && "$SUDO_USER" != "$DEFAULT_USER" ]]; then
 		prompt_segment black default "%(!.%{%F{yellow}%}.)$USER@%m"
 	fi
 }
