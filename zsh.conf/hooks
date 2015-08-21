@@ -1,4 +1,5 @@
 #!/bin/zsh
+
 CURRENT_TIMESTAMP_PREEXEC=$SECONDS
 function ganglio_preexec {
 	CURRENT_TIMESTAMP_PREEXEC=$SECONDS

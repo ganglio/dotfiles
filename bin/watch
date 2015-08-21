@@ -1,0 +1,10 @@
+#!/bin/zsh
+
+[[ "$2" != "" ]] && sleeptime=$2 || sleeptime=1
+
+while :; do
+	clear;
+	echo "$(date)"
+	eval $1;
+	sleep $sleeptime;
+done

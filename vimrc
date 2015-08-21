@@ -1,6 +1,7 @@
 set t_Co=256
-hi CursorLine   cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
-set cursorline!
+hi CursorLine     cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
+hi CursorColumn   cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
+set cursorline! cursorcolumn!
 set backspace=2
 syn on
 set nu

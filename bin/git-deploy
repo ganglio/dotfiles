@@ -1,0 +1,24 @@
+#!/bin/zsh
+
+usage() {
+	echo "usage: git deploy <branch>"
+	echo
+	echo "Tags and push against both origin and deploy remotes for the specified branch."
+	echo "The tag format is <branch>-$(date +%Y%m%d)-<counter>-$USER"
+	echo
+	echo
+	echo $(getcounter)
+}
+
+getcounter() {
+
+}
+
+main() {
+	if [ $# -lt 1 ]; then
+		usage
+		exit 1
+	fi
+}
+
+main "$@"
