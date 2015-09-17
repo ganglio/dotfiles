@@ -1,3 +1,4 @@
+#!/bin/zsh
 # vim:ft=zsh ts=2 sw=2 sts=2
 #
 # gagnoster theme
@@ -114,7 +115,18 @@ build_prompt() {
 	prompt_end
 }
 
-build_rprompt() {}
+rprompt_pyenv() {
+	type pyenv 2>&1 > /dev/null
+	if [[ $? -eq 0 ]]; then
+		version=$(pyenv local 2> /dev/null)
+		[[ -n "$version" ]] && rprompt_segment black red "🐍  $version"
+	fi
+}
+
+build_rprompt() {
+	rprompt_pyenv
+	rprompt_end
+}
 
 PROMPT='%{%f%b%k%}$(build_prompt) %{%f%b%k%}'
 RPROMPT='%{%f%b%k%}$(build_rprompt)%{%f%b%k%}'
