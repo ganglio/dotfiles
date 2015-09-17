@@ -83,10 +83,21 @@ prompt_dir() {
 
 # Shows Running Vagrant Machines
 prompt_vagrant() {
+	# check if there are any runnign vagrants
 	vmc=$(ps ax | grep '[V]BoxHeadless' | wc -l)
-	vagrants=$(echo -n ${(l:${vmc}::ᐯ:)})
+	if [ $vmc -gt 0 ]; then
+		vagrants=$(echo -n ${(l:${vmc}::ᐯ:)})
+		[[ -n "$vagrants" ]] && prompt_segment black cyan $vagrants
+	else
+		if [[ -f /var/log/dmesg ]]; then # we are on linux
+			invm=$(cat /var/log/dmesg | grep -i paravirtualized | wc -l)
+			if [ $invm -gt 0 ]; then # and we are inside a VM
+				prompt_segment black red "ᐱ"
+			fi
+		fi
+	fi
 
-	[[ -n "$vagrants" ]] && prompt_segment black cyan $vagrants
+	
 }
 
 # Status:
