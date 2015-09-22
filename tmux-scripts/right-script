@@ -38,9 +38,21 @@ rprompt_battery() {
 	fi
 }
 
+rprompt_online() {
+	pingtime=$(ping -c 1 www.google.com 2>&1 | grep 'time' | awk -F '=' '{ print $4}')
+	if [[ -n "$pingtime" ]]; then
+		color='green'
+	else
+		color='red'
+	fi
+
+	rprompt_segment black $color "● $pingtime"
+}
+
+rprompt_online
 rprompt_battery
-rprompt_segment black yellow "$(~/.dotfiles/bin/mem)"
-rprompt_segment black green "$(~/.dotfiles/bin/cpu)"
+# rprompt_segment black yellow "$(~/.dotfiles/bin/mem)"
+# rprompt_segment black green "$(~/.dotfiles/bin/cpu)"
 [[ -n "$(~/.dotfiles/bin/vagrant-machines)" ]] && rprompt_segment black cyan "$(~/.dotfiles/bin/vagrant-machines)"
 rprompt_segment black white "$(date '+%H:%M:%S')"
 rprompt_segment black blue "$(date '+%Y-%m-%d')"
