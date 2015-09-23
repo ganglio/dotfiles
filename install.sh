@@ -24,4 +24,7 @@ ln -s ~/.dotfiles/vimrc ~/.vimrc
 ln -s ~/.dotfiles/vim ~/.vim
 ln -s ~/.dotfiles/tmux.conf ~/.tmux.conf
 
+# Initialising the autoupdate script
+date +%s > ~/.dotfiles/.lastupdated
+
 echo "Done! Happy commandlining :D"

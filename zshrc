@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+source ~/.dotfiles/update.sh
+
 ZSH=$HOME/.oh-my-zsh
 ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
 
@@ -23,7 +25,6 @@ if [ -d ~/.dotfiles/zsh.conf ]; then
 fi
 
 unsetopt correct_all
-# eval `dircolors ~/.dotfiles/colors/solarized`
 export EDITOR='vim'
 
 export TERM=xterm-256color

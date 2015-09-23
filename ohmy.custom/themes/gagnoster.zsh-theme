@@ -98,7 +98,7 @@ prompt_vagrant() {
 		fi
 	fi
 
-	
+
 }
 
 # Status:
@@ -110,7 +110,9 @@ prompt_status() {
 	symbols=()
 	[[ $RETVAL -ne 0 ]] && symbols+="%{%F{red}%}✘"
 	[[ $UID -eq 0 ]] && symbols+="%{%F{yellow}%}⚡"
-	[[ $(jobs -l | wc -l) -gt 0 ]] && symbols+="%{%F{cyan}%}⚙"
+
+	BGJOBS=$(jobs -l | wc -l)
+	[[ $BGJOBS -gt 0 ]] && symbols+="%{%F{cyan}%}"${(l:${BGJOBS}::⚙:)}
 
 	[[ -n "$symbols" ]] && prompt_segment black default "$symbols"
 }
