@@ -4,7 +4,7 @@ lastupdated=$(cat ~/.dotfiles/.lastupdated 2> /dev/null)
 
 oldpwd=$(pwd)
 
-if [[ ( -z "$lastupdated" ) || ( "$lastupdated" -lt $(date +"%s-(7*3600)" | bc) ) ]]; then
+if [[ ( -z "$lastupdated" ) || ( "$lastupdated" -lt $(date +"%s-(7*86400)" | bc) ) ]]; then
 	vared -p 'DotFiles: Do you want to check for updates? (Y/n) >' -c check
 	if [[ ( "$check" != "n" ) && ( "$check" != "N" ) ]]; then
 		echo "Updating..."
