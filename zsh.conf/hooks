@@ -8,7 +8,13 @@ function ganglio_preexec {
 function ganglio_precmd {
 	local stl
 	let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
-	[[ "$ELAPSED" -gt "0" ]] && echo -e "\x1b[38;5;121m>>> $ELAPSED\x1b[0m"
+	if [[ "$ELAPSED" -gt "0" ]]; then
+		elapsed=">>> $ELAPSED"
+		len=${#${elapsed}}
+		now=$(date +%H:%M:%S)
+		nowlen=${#${now}}
+		print -P -- "$FX[bold]$FG[087]$elapsed $FG[239]${(l:($COLUMNS-$len-$nowlen-2)::-:)} $FG[226]$now$reset_color"
+	fi
 }
 
 # Load required functions.
