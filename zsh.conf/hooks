@@ -1,19 +1,22 @@
 #!/bin/zsh
 
-CURRENT_TIMESTAMP_PREEXEC=$SECONDS
+CURRENT_TIMESTAMP_PREEXEC="STOP"
 function ganglio_preexec {
 	CURRENT_TIMESTAMP_PREEXEC=$SECONDS
 }
 
 function ganglio_precmd {
 	local stl
-	let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
-	if [[ "$ELAPSED" -gt "0" ]]; then
-		elapsed=">>> $ELAPSED"
-		len=${#${elapsed}}
-		now=$(date +%H:%M:%S)
-		nowlen=${#${now}}
-		print -P -- "$FX[bold]$FG[087]$elapsed $FG[239]${(l:($COLUMNS-$len-$nowlen-2)::-:)} $FG[226]$now$reset_color"
+	if [[ "$CURRENT_TIMESTAMP_PREEXEC" -ne "STOP" ]]; then
+		let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
+		if [[ ( "$ELAPSED" -gt "0" ) ]]; then
+			elapsed=">>> $ELAPSED"
+			len=${#${elapsed}}
+			now=$(date +%H:%M:%S)
+			nowlen=${#${now}}
+			print -P -- "$FX[bold]$FG[087]$elapsed $FG[239]${(l:($COLUMNS-$len-$nowlen-2)::-:)} $FG[226]$now$reset_color"
+			CURRENT_TIMESTAMP_PREEXEC="STOP"
+		fi
 	fi
 }
 
