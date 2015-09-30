@@ -20,6 +20,7 @@ function ganglio_precmd {
 			CURRENT_TIMESTAMP_PREEXEC="STOP"
 		fi
 	fi
+	CURRENT_TIMESTAMP_PREEXEC="STOP"
 }
 
 # Load required functions.
