@@ -6,15 +6,17 @@ function ganglio_preexec {
 }
 
 function ganglio_precmd {
-	local stl
+	RETVAL=$?
 	if [[ "$CURRENT_TIMESTAMP_PREEXEC" -ne "STOP" ]]; then
 		let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
 		if [[ ( "$ELAPSED" -gt "0" ) ]]; then
 			elapsed=">>> $ELAPSED"
-			len=${#${elapsed}}
+			
+			ecolor=002
+			[[ "$RETVAL" -ne "0" ]] && ecolor=001
+			
 			now=$(date +%H:%M:%S)
-			nowlen=${#${now}}
-			print -P -- "$FX[bold]$FG[087]$elapsed $FG[239]${(l:($COLUMNS-$len-$nowlen-2)::-:)} $FG[226]$now$reset_color"
+			hr $elapsed "" $now $ecolor "" 003 008
 			CURRENT_TIMESTAMP_PREEXEC="STOP"
 		fi
 	fi
