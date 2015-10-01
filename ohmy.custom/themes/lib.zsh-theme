@@ -142,29 +142,6 @@ else # this is a shell
 		RCURRENT_BG=''
 	}
 
-	hr() {
-
-		[[ -n "$1" ]] && LMESSAGE="$1 "  || LMESSAGE=""
-		[[ -n "$2" ]] && CMESSAGE=" $2 " || CMESSAGE=""
-		[[ -n "$3" ]] && RMESSAGE=" $3"  || RMESSAGE=""
-
-		[[ "$4" = <-> ]] && LFG=$FG[$4] || LFG=""
-		[[ "$5" = <-> ]] && CFG=$FG[$5] || CFG=""
-		[[ "$6" = <-> ]] && RFG=$FG[$6] || RFG=""
-		[[ "$7" = <-> ]] && BFG=$FG[$7] || BFG=""
-		
-		LLENGTH=${#${LMESSAGE}}
-		CLENGTH=${#${CMESSAGE}}
-		RLENGTH=${#${RMESSAGE}}
-
-		CODD=$(( $CLENGTH%2 ))
-
-		LBAR=$BFG${(l:($COLUMNS/2-$LLENGTH-$CLENGTH/2-$CODD)::-:)}$reset_color
-		RBAR=$BFG${(l:($COLUMNS/2-$RLENGTH-$CLENGTH/2)::-:)}$reset_color
-
-		print -P -- "$LFG$LMESSAGE$reset_color$LBAR$CFG$CMESSAGE$reset_color$RBAR$RFG$RMESSAGE$reset_color"
-	}
-
 	putcur() {
 		echo -e -n "\033[s"
 	}

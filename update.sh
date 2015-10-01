@@ -1,5 +1,7 @@
 #!/bin/zsh
 
+source ~/.dotfiles/zsh.conf/functions
+
 lastupdated=$(cat ~/.dotfiles/.lastupdated 2> /dev/null)
 
 oldpwd=$(pwd)
@@ -13,5 +15,6 @@ if [[ ( -z "$lastupdated" ) || ( "$lastupdated" -lt $(date +"%s-(7*86400)" | bc)
 		cd $oldpwd
 		date +%s > ~/.dotfiles/.lastupdated
 		echo "Done! Happy commandlining :D"
+		dotbanner
 	fi
 fi

@@ -32,3 +32,44 @@ function get_tmux_env() {
 	keyval=$(tmux showenv $1 2> /dev/null | awk -F '=' '{print $1}')
 	echo $keyval
 }
+
+function dotbanner() {
+	rainbow '     _     _   ___ _ _         ' '   _| |___| |_|  _|_| |___ ___ ' ' _| . | . |  _|  _| | | -_|_ -|' '|_|___|___|_| |_| |_|_|___|___|'
+}
+
+hr() {
+	[[ -n "$1" ]] && LMESSAGE="$1 "  || LMESSAGE=""
+	[[ -n "$2" ]] && CMESSAGE=" $2 " || CMESSAGE=""
+	[[ -n "$3" ]] && RMESSAGE=" $3"  || RMESSAGE=""
+
+	[[ "$4" = <-> ]] && LFG=$FG[$4] || LFG=""
+	[[ "$5" = <-> ]] && CFG=$FG[$5] || CFG=""
+	[[ "$6" = <-> ]] && RFG=$FG[$6] || RFG=""
+	[[ "$7" = <-> ]] && BFG=$FG[$7] || BFG=""
+
+	LLENGTH=${#${LMESSAGE}}
+	CLENGTH=${#${CMESSAGE}}
+	RLENGTH=${#${RMESSAGE}}
+
+	CODD=$(( $CLENGTH%2 ))
+
+	LBAR=$BFG${(l:($COLUMNS/2-$LLENGTH-$CLENGTH/2-$CODD)::-:)}$reset_color
+	RBAR=$BFG${(l:($COLUMNS/2-$RLENGTH-$CLENGTH/2)::-:)}$reset_color
+
+	print -P -- "$LFG$LMESSAGE$reset_color$LBAR$CFG$CMESSAGE$reset_color$RBAR$RFG$RMESSAGE$reset_color"
+}
+
+rainbow() {
+	color=160
+	while [[ "$#" -gt 0 ]]; do
+		string=$1
+		for c in "${(s//)string}"; do
+			print -Pn -- $FG[$(printf "%03d" $color)]$c
+			color=$(( ($color+1)%196 ))
+			[[ $color == 0 ]] && color=160
+		done
+		print
+		shift
+	done
+	print -P -- $reset_color
+}
