@@ -122,7 +122,7 @@ else # this is a shell
 		if [[ $RCURRENT_BG != 'NONE' && $1 != $RCURRENT_BG ]]; then
 			echo -n " %F{$1}%K{$RCURRENT_BG}$RSEGMENT_SEPARATOR"
 		elif [[ $1 == $RCURRENT_BG ]]; then
-			echo -n " %F{$2}#K{$RCURRENT_BG}$RSEGMENT_SEPARATOR_SAME"
+			echo -n " %F{$2}%K{$RCURRENT_BG}$RSEGMENT_SEPARATOR_SAME"
 		else
 			echo -n "%F{$1}$RSEGMENT_SEPARATOR"
 		fi

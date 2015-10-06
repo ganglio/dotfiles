@@ -136,7 +136,13 @@ rprompt_pyenv() {
 	fi
 }
 
+rprompt_githash() {
+	hh=$(git log --pretty=format:'%h' -n 1 2> /dev/null)
+	[[ -n "$hh" ]] && rprompt_segment black yellow " $hh"
+}
+
 build_rprompt() {
+	rprompt_githash
 	rprompt_pyenv
 	rprompt_end
 }
