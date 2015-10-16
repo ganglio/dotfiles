@@ -34,10 +34,16 @@ function get_tmux_env() {
 }
 
 function dotbanner() {
-	rainbow '     _     _   ___ _ _         ' '   _| |___| |_|  _|_| |___ ___ ' ' _| . | . |  _|  _| | | -_|_ -|' '|_|___|___|_| |_| |_|_|___|___|'
+	rainbow \
+		'     _     _   ___ _ _         ' \
+		'   _| |___| |_|  _|_| |___ ___ ' \
+		' _| . | . |  _|  _| | | -_|_ -|' \
+		'|_|___|___|_| |_| |_|_|___|___|'
 }
 
 hr() {
+	local LMESSAGE CMESSAGE RMESSAGE LLENGTH CLENGTH RLENGTH CODD LBAR RBAR
+
 	[[ -n "$1" ]] && LMESSAGE="$1 "  || LMESSAGE=""
 	[[ -n "$2" ]] && CMESSAGE=" $2 " || CMESSAGE=""
 	[[ -n "$3" ]] && RMESSAGE=" $3"  || RMESSAGE=""
@@ -73,3 +79,4 @@ rainbow() {
 	done
 	print -P -- $reset_color
 }
+
