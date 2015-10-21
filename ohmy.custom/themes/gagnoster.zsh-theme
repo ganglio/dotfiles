@@ -125,7 +125,7 @@ function prompt_isssh() {
 build_prompt() {
 	RETVAL=$?
 	prompt_status
-	prompt_isssh
+#	prompt_isssh
 	prompt_context
 	prompt_dir
 	prompt_vagrant
