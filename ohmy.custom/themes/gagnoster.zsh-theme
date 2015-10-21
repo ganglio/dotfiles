@@ -18,7 +18,7 @@ source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 
 # Context: user@hostname (who am I and where am I)
 prompt_context() {
-	if [[ ( "$USER" != "root" && "$USER" != "$DEFAULT_USER" ) || ( -n "$SSH_CLIENT" && "$USER" != "vagrant" ) || ( "$SUDO_USER" != "$DEFAULT_USER" && -n "$SUDO_USER" ) ]]; then
+	if [[ ( "$USER" != "root" && "$USER" != "$DEFAULT_USER" ) || ( -n "$SSH_CLIENT" && "$USER" != "vagrant" && "$USER" != "$DEFAULT_USER" ) || ( "$SUDO_USER" != "$DEFAULT_USER" && -n "$SUDO_USER" ) ]]; then
 		prompt_segment black default "%(!.%{%F{yellow}%}.)$USER@%m"
 	fi
 }
@@ -117,10 +117,15 @@ prompt_status() {
 	[[ -n "$symbols" ]] && prompt_segment black default "$symbols"
 }
 
+function prompt_isssh() {
+	[[ -n "$SSH_CLIENT" ]] && prompt_segment black yellow "🔒 "
+}
+
 ## Main prompt
 build_prompt() {
 	RETVAL=$?
 	prompt_status
+	prompt_isssh
 	prompt_context
 	prompt_dir
 	prompt_vagrant
