@@ -1,0 +1,22 @@
+#!/bin/zsh
+
+if [[ -z "$SSH_CLIENT" ]]; then
+	echo "Not inside a VM"
+	exit -1
+fi
+
+HOST_IP=$(echo $SSH_CLIENT | awk '{print $1}')
+
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+RED="\033[1;31m"
+RESET="\033[0m"
+cmd=$@
+
+if [ -z "$cmd" ]; then
+	echo "Connecting to vagrant"
+	ssh $HOST_IP
+else
+	echo "Executing \""$YELLOW$cmd$RESET"\""
+	ssh $HOST_IP "$cmd"
+fi
