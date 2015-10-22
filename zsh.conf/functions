@@ -58,9 +58,10 @@ hr() {
 	RLENGTH=${#${RMESSAGE}}
 
 	CODD=$(( $CLENGTH%2 ))
+	COLS=$(( $COLUMNS ))
 
-	LBAR=$BFG${(l:($COLUMNS/2-$LLENGTH-$CLENGTH/2-$CODD)::-:)}$reset_color
-	RBAR=$BFG${(l:($COLUMNS/2-$RLENGTH-$CLENGTH/2)::-:)}$reset_color
+	LBAR=$BFG${(l:($COLS/2-$LLENGTH-$CLENGTH/2-$CODD)::-:)}$reset_color
+	RBAR=$BFG${(l:($COLS/2-$RLENGTH-$CLENGTH/2-1)::-:)}$reset_color
 
 	print -P -- "$LFG$LMESSAGE$reset_color$LBAR$CFG$CMESSAGE$reset_color$RBAR$RFG$RMESSAGE$reset_color"
 }
