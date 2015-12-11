@@ -4,7 +4,9 @@ hi CursorColumn   cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
 set cursorline! cursorcolumn!
 set backspace=2
 syn on
-set nu
+set number
+set relativenumber
+set scrolloff=8
 set tabstop=2
 set shiftwidth=2
 set noexpandtab
@@ -26,3 +28,7 @@ set nowb
 
 set encoding=utf-8
 autocmd InsertLeave * if expand('%') != '' | update | endif
+
+silent !mkdir ~/.vim_backups > /dev/null 2>&1
+set undodir=~/.vim_backups
+set undofile
