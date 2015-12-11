@@ -2,6 +2,8 @@
 
 source ~/.dotfiles/update.sh
 
+fpath=(~/.dotfiles/zsh.conf/completions $fpath)
+
 ZSH=$HOME/.oh-my-zsh
 ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
 

@@ -1,0 +1,5 @@
+# # compdef vsh
+local -a machines
+running=$(jq -r -f ~/.dotfiles/bin/vagrants_complete.jq ~/.vagrant.d/data/machine-index/index)
+machines=("${(s/ /)running}")
+_describe 'values' machines
