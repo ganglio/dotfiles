@@ -13,7 +13,14 @@ echo "Creating backup files"
 [ -d ~/.vim ] && mv ~/.vim ~/.vim.orig-$now
 
 echo "Cloning dotfiles"
-git clone https://github.com/ganglio/dotfiles.git ~/.dotfiles
+git clone https://github.com/ganglio/dotfiles.git ~/.dotfile
+
+echo "Pulling submodules"
+OLD_PWD=$PWD
+cd ~/.dotfiles
+git submodule init
+git submodule update
+cd $OLD_PWD
 
 echo "Cloning oh-my-zsh"
 git clone https://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
