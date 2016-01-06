@@ -12,6 +12,7 @@ if [[ ( -z "$lastupdated" ) || ( "$lastupdated" -lt $(date +"%s-(7*86400)" | bc)
 		echo "Updating..."
 		cd ~/.dotfiles
 		git pull origin master
+		git submodule foreach git pull origin master
 		cd $oldpwd
 		date +%s > ~/.dotfiles/.lastupdated
 		echo "Done! Happy commandlining :D"
