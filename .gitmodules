@@ -1,3 +1,0 @@
-[submodule "zsh.conf/envdir"]
-	path = zsh.conf/envdir
-	url = https://github.com/ganglio/envdir.git
