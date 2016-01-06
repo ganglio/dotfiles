@@ -30,3 +30,5 @@ unsetopt correct_all
 export EDITOR='vim'
 
 export TERM=xterm-256color
+
+source ~/.dotfiles/zsh.conf/envdir/envdir
