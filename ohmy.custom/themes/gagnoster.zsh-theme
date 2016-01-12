@@ -133,6 +133,12 @@ build_prompt() {
 	prompt_end
 }
 
+rprompt_tmuxes() {
+	local tmuxes
+	tmuxes=$(tmux list-sessions 2> /dev/null | wc -l)
+	[[ $tmuxes -gt 0 ]] && rprompt_segment black magenta "▣ $tmuxes"
+}
+
 rprompt_pyenv() {
 	type pyenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
@@ -149,6 +155,7 @@ rprompt_githash() {
 build_rprompt() {
 	rprompt_githash
 	rprompt_pyenv
+	rprompt_tmuxes
 	rprompt_end
 }
 
