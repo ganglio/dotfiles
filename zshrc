@@ -2,8 +2,6 @@
 
 source ~/.dotfiles/update.sh
 
-fpath=(~/.dotfiles/zsh.conf/completions $fpath)
-
 ZSH=$HOME/.oh-my-zsh
 ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
 
@@ -22,6 +20,11 @@ if [ -d ~/.dotfiles/zsh.conf ]; then
 	if [ -d ~/.dotfiles/zsh.conf/custom ]; then
 		for custom_conf_file in `ls ~/.dotfiles/zsh.conf/custom`; do
 			[[ "$custom_conf_file" != ".gitignore" ]] && source ~/.dotfiles/zsh.conf/custom/$custom_conf_file
+		done
+	fi
+	if [ -d ~/.dotfiles/zsh.conf/completions ]; then
+		for custom_completions in $(ls ~/.dotfiles/zsh.conf/completions); do
+			source ~/.dotfiles/zsh.conf/completions/$custom_completions
 		done
 	fi
 fi
