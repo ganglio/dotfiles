@@ -5,6 +5,11 @@ YELLOW="\033[1;33m"
 RED="\033[1;31m"
 RESET="\033[0m"
 
+if [[ "$USER" == 'vagrant' ]]; then
+  echo "You are already inside a vagrant"
+  exit 1
+fi
+
 cmd=$@
 
 running=$(jq -r -f ~/.dotfiles/bin/vagrants_enumerate.jq ~/.vagrant.d/data/machine-index/index)
