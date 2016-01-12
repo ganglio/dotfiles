@@ -1,17 +1,48 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
+
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+RED="\033[1;31m"
+RESET="\033[0m"
 
 usage() {
 	echo "usage: git deploy <branch>"
 	echo
 	echo "Tags and push against both origin and deploy remotes for the specified branch."
-	echo "The tag format is <branch>-$(date +%Y%m%d)-<counter>-$USER"
-	echo
-	echo
-	echo $(getcounter)
+	echo -e "The next tag format will be "$YELLOW$(getcurrenttag)$RESET
+}
+
+getcurrenttag() {
+	echo $(getcurrentbranchtag)"-"$(date +%Y%m%d)"-"$(getcounter)"-"$USER
 }
 
 getcounter() {
+	current_tag=$(getcurrentbranchtag)
+	today=$(date +%Y%m%d)
+	current_count=$(git tag | grep $current_tag"-"$today | wc -l)
+	printf "%02d" $((current_count + 1))
+}
 
+getcurrentbranch() {
+	echo $(git branch | grep "^*" | awk '{print $2}')
+}
+
+getcurrentbranchtag() {
+	branch=$(getcurrentbranch)
+	case "$branch" in
+		master)
+			echo "prod"
+		;;
+
+		stage)
+			echo "stage"
+		;;
+
+		*)
+			echo "You are in an undeployable branch '$RED$branch$RESET'. Please switch to either master or stage"
+			exit 1
+		;;
+	esac
 }
 
 main() {
@@ -19,6 +50,31 @@ main() {
 		usage
 		exit 1
 	fi
+
+	getcurrentbranchtag > /dev/null # exit if the branch is not correct
+
+	if [ $1 != $(getcurrentbranch) ]; then
+		echo "Please specify the current branch (either master or stage)"
+		exit 1
+	fi
+
+	echo "Tagging $GREEN"$(getcurrenttag)$RESET
+	git tag $(getcurrenttag)
+
+	# check and eventually push to origin
+	if [ $(git remote -v | grep "origin" | wc -l) -gt 0 ]; then
+		git push --tags origin $1
+	else
+		echo "${GREEN}origin${RESET} not present. Not pushing."
+	fi
+
+	# check and eventually push to deploy
+	if [ $(git remote -v | grep "deploy" | wc -l) -gt 0 ]; then
+		git push --tags deploy $1
+	else
+		echo "${GREEN}deploy${RESET} not present. Not pushing."
+	fi
+
 }
 
 main "$@"
