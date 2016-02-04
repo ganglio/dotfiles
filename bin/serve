@@ -1,0 +1,4 @@
+#!/bin/zsh
+
+echo $PWD
+env python -m http.server
