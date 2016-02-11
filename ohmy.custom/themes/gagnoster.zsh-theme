@@ -139,6 +139,14 @@ rprompt_tmuxes() {
 	[[ $tmuxes -gt 0 ]] && rprompt_segment black magenta "▣ $tmuxes"
 }
 
+rprompt_rbenv() {
+	type rbenv 2>&1 > /dev/null
+	if [[ $? -eq 0 ]]; then
+		version=$(rbenv local 2> /dev/null)
+		[[ -n "$version" ]] && rprompt_segment black red "💎  $version"
+	fi
+}
+
 rprompt_pyenv() {
 	type pyenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
@@ -155,6 +163,7 @@ rprompt_githash() {
 build_rprompt() {
 	rprompt_githash
 	rprompt_pyenv
+	rprompt_rbenv
 	rprompt_tmuxes
 	rprompt_end
 }
