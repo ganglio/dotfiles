@@ -161,11 +161,13 @@ rprompt_githash() {
 }
 
 build_rprompt() {
-	rprompt_githash
-	rprompt_pyenv
-	rprompt_rbenv
-	rprompt_tmuxes
-	rprompt_end
+	if [[ $COLUMNS -gt 100 ]]; then
+		rprompt_githash
+		rprompt_pyenv
+		rprompt_rbenv
+		rprompt_tmuxes
+		rprompt_end
+	fi
 }
 
 PROMPT='%{%f%b%k%}$(build_prompt) %{%f%b%k%}'
