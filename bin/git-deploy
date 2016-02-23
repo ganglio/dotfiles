@@ -30,9 +30,13 @@ getcurrentbranch() {
 getcurrentbranchtag() {
 	branch=$(getcurrentbranch)
 
-	if [[ -n ${extra_branch[$branch]} ]];
-		echo $extra_branch[$branch]
-		exit
+	if [[ -n $extra_branch ]]; then
+		typeset -A extra_branch_hash
+		extra_branch_hash=(${=extra_branch})
+		if [[ -n ${extra_branch_hash[$branch]} ]]; then
+			echo $extra_branch_hash[$branch]
+			return
+		fi
 	fi
 
 	case "$branch" in
@@ -45,7 +49,7 @@ getcurrentbranchtag() {
 		;;
 
 		*)
-			echo "You are in an undeployable branch '$RED$branch$RESET'. Please switch to either master or stage"
+			echo "You are in an undeployable branch '$RED$branch$RESET'. Please switch to either master or stage" 1&>2
 			exit 1
 		;;
 	esac
@@ -57,10 +61,10 @@ main() {
 		exit 1
 	fi
 
-	getcurrentbranchtag > /dev/null # exit if the branch is not correct
+	getcurrentbranchtag > /dev/null
 
 	if [ $1 != $(getcurrentbranch) ]; then
-		echo "Please specify the current branch (either master or stage)"
+		echo "${RED}Please specify the current branch$RESET"
 		exit 1
 	fi
 
