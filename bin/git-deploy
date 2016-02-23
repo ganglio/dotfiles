@@ -29,6 +29,12 @@ getcurrentbranch() {
 
 getcurrentbranchtag() {
 	branch=$(getcurrentbranch)
+
+	if [[ -n ${extra_branch[$branch]} ]];
+		echo $extra_branch[$branch]
+		exit
+	fi
+
 	case "$branch" in
 		master)
 			echo "prod"

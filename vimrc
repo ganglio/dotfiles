@@ -11,7 +11,7 @@ set tabstop=2
 set shiftwidth=2
 set noexpandtab
 set list
-set listchars=tab:——,trail:·
+set listchars=tab:\|\ ,trail:·
 highlight MyTabs ctermbg=NONE ctermfg=235
 match MyTabs /\t/
 
