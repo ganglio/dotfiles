@@ -60,7 +60,7 @@ prompt_git() {
 
 		[[ "$(git status 2> /dev/null | grep ahead | awk '{print $8;}')" != "" ]] && ahead=" ⍆"
 
-		[[ "$(git stash list)" != "" ]] && stash=" ︷"
+		[[ "$(git stash list)" != "" ]] && stash=" "
 
 		setopt promptsubst
 		autoload -Uz vcs_info
@@ -73,13 +73,13 @@ prompt_git() {
 		zstyle ':vcs_info:*' formats ' %u%c'
 		zstyle ':vcs_info:*' actionformats ' %u%c'
 		vcs_info
-		echo -n "${ref/refs\/heads\// }${vcs_info_msg_0_%% }${mode}${ahead}${stash}"
+		echo -n "${ref/refs\/heads\// }${vcs_info_msg_0_%% }${mode}${ahead}${stash}"
 	fi
 }
 
 # Dir: current working directory
 prompt_dir() {
-	prompt_segment blue black '%~'
+	prompt_segment blue black '%2c'
 }
 
 # Shows Running Vagrant Machines
@@ -108,17 +108,17 @@ prompt_vagrant() {
 prompt_status() {
 	local symbols
 	symbols=()
-	[[ $RETVAL -ne 0 ]] && symbols+="%{%F{red}%}✘"
-	[[ $UID -eq 0 ]] && symbols+="%{%F{yellow}%}⚡"
+	[[ $RETVAL -ne 0 ]] && symbols+="%{%F{red}%}"
+	[[ $UID -eq 0 ]] && symbols+="%{%F{yellow}%}"
 
 	BGJOBS=$(jobs -l | wc -l)
-	[[ $BGJOBS -gt 0 ]] && symbols+="%{%F{cyan}%}"${(l:${BGJOBS}::⚙:)}
+	[[ $BGJOBS -gt 0 ]] && symbols+="%{%F{cyan}%}"${(l:${BGJOBS}:::)}
 
 	[[ -n "$symbols" ]] && prompt_segment black default "$symbols"
 }
 
 function prompt_isssh() {
-	[[ -n "$SSH_CLIENT" ]] && prompt_segment black yellow "🔒 "
+	[[ -n "$SSH_CLIENT" ]] && prompt_segment black yellow " "
 }
 
 ## Main prompt
@@ -136,14 +136,14 @@ build_prompt() {
 rprompt_tmuxes() {
 	local tmuxes
 	tmuxes=$(tmux list-sessions 2> /dev/null | wc -l)
-	[[ $tmuxes -gt 0 ]] && rprompt_segment black magenta "▣ $tmuxes"
+	[[ $tmuxes -gt 0 ]] && rprompt_segment black magenta " $tmuxes"
 }
 
 rprompt_rbenv() {
 	type rbenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		version=$(rbenv local 2> /dev/null)
-		[[ -n "$version" ]] && rprompt_segment black red "💎  $version"
+		[[ -n "$version" ]] && rprompt_segment black red "  $version"
 	fi
 }
 
@@ -151,13 +151,13 @@ rprompt_pyenv() {
 	type pyenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		version=$(pyenv local 2> /dev/null)
-		[[ -n "$version" ]] && rprompt_segment black red "🐍  $version"
+		[[ -n "$version" ]] && rprompt_segment black red "  $version"
 	fi
 }
 
 rprompt_githash() {
 	hh=$(git log --pretty=format:'%h' -n 1 2> /dev/null)
-	[[ -n "$hh" ]] && rprompt_segment black yellow " $hh"
+	[[ -n "$hh" ]] && rprompt_segment black yellow " $hh"
 }
 
 build_rprompt() {
