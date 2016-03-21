@@ -12,6 +12,7 @@
 # Added the pending actions status to the git prompt and removed the support for mercurial as I think is useless :P
 
 source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
+source ~/.dotfiles/ohmy.custom/themes/colors.zsh-theme
 
 ### Prompt components
 # Each component will draw itself, and hide itself if no information needs to be shown
@@ -19,7 +20,7 @@ source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 # Context: user@hostname (who am I and where am I)
 prompt_context() {
 	if [[ ( "$USER" != "root" && "$USER" != "$DEFAULT_USER" ) || ( -n "$SSH_CLIENT" && "$USER" != "vagrant" && "$USER" != "$DEFAULT_USER" ) || ( "$SUDO_USER" != "$DEFAULT_USER" && -n "$SUDO_USER" ) ]]; then
-		prompt_segment black default "%(!.%{%F{yellow}%}.)$USER@%m"
+		prompt_segment $duotone_uno_03 $duotone_low_01 "%(!.%{%F{yellow}%}.)$USER@%m"
 	fi
 }
 
@@ -43,11 +44,11 @@ prompt_git() {
 		pending=$(parse_git_pending)
 		ref=$(git symbolic-ref HEAD 2> /dev/null) || ref="➦ $(git show-ref --head -s --abbrev |head -n1 2> /dev/null)"
 		if [[ -n $dirty ]]; then
-			prompt_segment yellow black
+			prompt_segment $duotone_duo_04 $duotone_low_01
 		elif [[ -n $pending ]]; then
-			prompt_segment cyan black
+			prompt_segment $duotone_extra $duotone_low_01
 		else
-			prompt_segment green black
+			prompt_segment $duotone_uno_06 $duotone_low_01
 		fi
 
 		if [[ -e "${repo_path}/BISECT_LOG" ]]; then
@@ -79,7 +80,7 @@ prompt_git() {
 
 # Dir: current working directory
 prompt_dir() {
-	prompt_segment blue black '%2c'
+	prompt_segment $duotone_uno_04 $duotone_low_01 '%2c'
 }
 
 # Shows Running Vagrant Machines
@@ -88,12 +89,12 @@ prompt_vagrant() {
 	vmc=$(ps ax | grep '[V]BoxHeadless' | wc -l)
 	if [ $vmc -gt 0 ]; then
 		vagrants=$(echo -n ${(l:${vmc}::ᐯ:)})
-		[[ -n "$vagrants" ]] && prompt_segment black cyan $vagrants
+		[[ -n "$vagrants" ]] && prompt_segment $duotone_uno_05 $duotone_low_01 $vagrants
 	else
 		if [[ -f /var/log/dmesg ]]; then # we are on linux
 			invm=$(cat /var/log/dmesg | grep -i paravirtualized | wc -l)
 			if [ $invm -gt 0 ]; then # and we are inside a VM
-				prompt_segment black red "ᐱ"
+				prompt_segment $duotone_uno_05 $duotone_low_01 "ᐱ"
 			fi
 		fi
 	fi
@@ -108,24 +109,24 @@ prompt_vagrant() {
 prompt_status() {
 	local symbols
 	symbols=()
-	[[ $RETVAL -ne 0 ]] && symbols+="%{%F{red}%}"
-	[[ $UID -eq 0 ]] && symbols+="%{%F{yellow}%}"
+	[[ $RETVAL -ne 0 ]] && symbols+="%{%F{$duotone_duo_01}%}"
+	[[ $UID -eq 0 ]] && symbols+="%{%F{$duotone_uno_06}%}"
 
 	BGJOBS=$(jobs -l | wc -l)
 	[[ $BGJOBS -gt 0 ]] && symbols+="%{%F{cyan}%}"${(l:${BGJOBS}:::)}
 
-	[[ -n "$symbols" ]] && prompt_segment black default "$symbols"
+	[[ -n "$symbols" ]] && prompt_segment $duotone_uno_01 $duotone_low_01 "$symbols"
 }
 
 function prompt_isssh() {
-	[[ -n "$SSH_CLIENT" ]] && prompt_segment black yellow " "
+	[[ -n "$SSH_CLIENT" ]] && prompt_segment $duotone_uno_02 $duotone_low_01 " "
 }
 
 ## Main prompt
 build_prompt() {
 	RETVAL=$?
 	prompt_status
-#	prompt_isssh
+	prompt_isssh
 	prompt_context
 	prompt_dir
 	prompt_vagrant
@@ -136,14 +137,14 @@ build_prompt() {
 rprompt_tmuxes() {
 	local tmuxes
 	tmuxes=$(tmux list-sessions 2> /dev/null | wc -l)
-	[[ $tmuxes -gt 0 ]] && rprompt_segment black magenta " $tmuxes"
+	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_02 " $tmuxes"
 }
 
 rprompt_rbenv() {
 	type rbenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		version=$(rbenv local 2> /dev/null)
-		[[ -n "$version" ]] && rprompt_segment black red "  $version"
+		[[ -n "$version" ]] && rprompt_segment $duotone_duo_03 $duotone_low_02 "  $version"
 	fi
 }
 
@@ -151,13 +152,13 @@ rprompt_pyenv() {
 	type pyenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		version=$(pyenv local 2> /dev/null)
-		[[ -n "$version" ]] && rprompt_segment black red "  $version"
+		[[ -n "$version" ]] && rprompt_segment $duotone_duo_02 $duotone_low_02 "  $version"
 	fi
 }
 
 rprompt_githash() {
 	hh=$(git log --pretty=format:'%h' -n 1 2> /dev/null)
-	[[ -n "$hh" ]] && rprompt_segment black yellow " $hh"
+	[[ -n "$hh" ]] && rprompt_segment $duotone_duo_01 $duotone_low_02 " $hh"
 }
 
 build_rprompt() {
@@ -170,5 +171,5 @@ build_rprompt() {
 	fi
 }
 
-PROMPT='%{%f%b%k%}$(build_prompt) %{%f%b%k%}'
+PROMPT='%{%f%b%k%}$(build_prompt)%{%f%b%k%}  '
 RPROMPT='%{%f%b%k%}$(build_rprompt)%{%f%b%k%}'

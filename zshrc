@@ -7,7 +7,7 @@ ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
 
 ZSH_THEME="gagnoster"
 
-plugins=(git gem vagrant jump pyenv rbenv pip composer ffmpeg brew npm ipython zsh-syntax-highlighting)
+plugins=(git gem vagrant jump pyenv rbenv pip composer ffmpeg brew npm ipython)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -35,3 +35,5 @@ export EDITOR='vim'
 export TERM=xterm-256color
 
 source ~/.dotfiles/zsh.conf/envdir/envdir
+
+export LSCOLORS=fxDxcxdxFxegedabagacad

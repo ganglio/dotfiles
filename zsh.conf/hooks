@@ -11,12 +11,12 @@ function ganglio_precmd {
 		let ELAPSED=$SECONDS-$CURRENT_TIMESTAMP_PREEXEC
 		if [[ ( "$ELAPSED" -gt "0" ) ]]; then
 			elapsed=">>> $ELAPSED"
-			
-			ecolor=002
-			[[ "$RETVAL" -ne "0" ]] && ecolor=001
-			
+
+			ecolor=$duotone_uno_05
+			[[ "$RETVAL" -ne "0" ]] && ecolor=$duotone_duo_01
+
 			now=$(date +%H:%M:%S)
-			hr $elapsed "" $now $ecolor "" 003 008
+			hr $elapsed "" $now $ecolor "" $duotone_uno_01 $duotone_low_02
 			CURRENT_TIMESTAMP_PREEXEC="STOP"
 		fi
 	fi
