@@ -137,7 +137,7 @@ build_prompt() {
 rprompt_tmuxes() {
 	local tmuxes
 	tmuxes=$(tmux list-sessions 2> /dev/null | wc -l)
-	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_02 " $tmuxes"
+	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_02 "  $tmuxes"
 }
 
 rprompt_rbenv() {

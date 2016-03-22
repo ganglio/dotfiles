@@ -1,3 +1,19 @@
+" Start Bundle
+set nocompatible
+filetype off
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+
+Plugin 'VundleVim/Vundle.vim'
+Plugin 'sheerun/vim-polyglot'
+Plugin 'mattn/emmet-vim'
+
+call vundle#end()
+filetype plugin indent on
+" End Bundle
+
+
+
 set t_Co=256
 hi CursorLine     cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
 hi CursorColumn   cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
