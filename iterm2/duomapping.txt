@@ -1,0 +1,39 @@
+00 Color => 00
+10 Color => 01
+11 Color => 02
+08 Color => 03
+12 Color => 04
+
+07 Color => 05
+13 Color => 06
+15 Color => 07
+01 Color => 08
+09 Color => 09
+03 Color => 0A
+
+02 Color => 0B
+06 Color => 0C
+04 Color => 0D
+05 Color => 0E
+
+14 Color => 0F
+
+export duotone_low_01=000
+export duotone_low_02=010
+export duotone_low_03=011
+export duotone_low_04=008
+export duotone_low_05=012
+
+export duotone_uno_01=007
+export duotone_uno_02=013
+export duotone_uno_03=015
+export duotone_uno_04=001
+export duotone_uno_05=009
+export duotone_uno_06=003
+
+export duotone_duo_01=002
+export duotone_duo_02=006
+export duotone_duo_03=004
+export duotone_duo_04=005
+
+export duotone_extra=014

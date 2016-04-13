@@ -1,0 +1,19 @@
+let duotone_low_01=000
+let duotone_low_02=001
+let duotone_low_03=002
+let duotone_low_04=003
+let duotone_low_05=004
+
+let duotone_uno_01=005
+let duotone_uno_02=006
+let duotone_uno_03=007
+let duotone_uno_04=008
+let duotone_uno_05=009
+let duotone_uno_06=010
+
+let duotone_duo_01=011
+let duotone_duo_02=012
+let duotone_duo_03=013
+let duotone_duo_04=014
+
+let duotone_extra=015

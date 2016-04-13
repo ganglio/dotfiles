@@ -134,17 +134,26 @@ build_prompt() {
 	prompt_end
 }
 
+rprompt_itunes() {
+	state=$(osascript -e 'tell application "iTunes" to player state as string')
+	if [ $state = 'playing' ]; then
+		artist=$(osascript -e 'tell application "iTunes" to artist of current track as string')
+		track=$(osascript -e 'tell application "iTunes" to name of current track as string')
+		rprompt_segment $duotone_extra $duotone_low_01 "  $artist - $track"
+	fi
+}
+
 rprompt_tmuxes() {
 	local tmuxes
 	tmuxes=$(tmux list-sessions 2> /dev/null | wc -l)
-	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_02 "  $tmuxes"
+	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_01 "  $tmuxes"
 }
 
 rprompt_rbenv() {
 	type rbenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		version=$(rbenv local 2> /dev/null)
-		[[ -n "$version" ]] && rprompt_segment $duotone_duo_03 $duotone_low_02 "  $version"
+		[[ -n "$version" ]] && rprompt_segment $duotone_duo_03 $duotone_low_01 "  $version"
 	fi
 }
 
@@ -152,13 +161,13 @@ rprompt_pyenv() {
 	type pyenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		version=$(pyenv local 2> /dev/null)
-		[[ -n "$version" ]] && rprompt_segment $duotone_duo_02 $duotone_low_02 "  $version"
+		[[ -n "$version" ]] && rprompt_segment $duotone_duo_02 $duotone_low_01 "  $version"
 	fi
 }
 
 rprompt_githash() {
 	hh=$(git log --pretty=format:'%h' -n 1 2> /dev/null)
-	[[ -n "$hh" ]] && rprompt_segment $duotone_duo_01 $duotone_low_02 " $hh"
+	[[ -n "$hh" ]] && rprompt_segment $duotone_duo_01 $duotone_low_01 " $hh"
 }
 
 build_rprompt() {
@@ -167,6 +176,7 @@ build_rprompt() {
 		rprompt_pyenv
 		rprompt_rbenv
 		rprompt_tmuxes
+		rprompt_itunes
 		rprompt_end
 	fi
 }

@@ -12,11 +12,11 @@ call vundle#end()
 filetype plugin indent on
 " End Bundle
 
-
+source ~/.vim/duocolors.viml
 
 set t_Co=256
-hi CursorLine     cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
-hi CursorColumn   cterm=BOLD ctermbg=235 ctermfg=NONE guibg=235 guifg=NONE
+hi CursorLine     cterm=BOLD ctermbg=003 ctermfg=NONE guibg=003 guifg=NONE
+hi CursorColumn   cterm=BOLD ctermbg=003 ctermfg=NONE guibg=003 guifg=NONE
 set cursorline! cursorcolumn!
 set backspace=2
 syn on
@@ -28,7 +28,7 @@ set shiftwidth=2
 set noexpandtab
 set list
 set listchars=tab:\|\ ,trail:·
-highlight MyTabs ctermbg=NONE ctermfg=235
+highlight MyTabs ctermbg=NONE ctermfg=003
 match MyTabs /\t/
 
 au BufReadPost Vagrantfile set syntax=ruby
