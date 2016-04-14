@@ -141,7 +141,9 @@ rprompt_itunes() {
 		if [ $state = 'playing' ]; then
 			artist=$(osascript -e 'tell application "iTunes" to artist of current track as string')
 			track=$(osascript -e 'tell application "iTunes" to name of current track as string')
-			rprompt_segment $duotone_extra $duotone_low_01 "  $artist - $track"
+			short_track=$track[1,15]
+			[[ ${#track} -gt ${#short_track} ]] && short_track=$short_track"…"
+			rprompt_segment $duotone_extra $duotone_low_01 "  $artist - $short_track"
 		fi
 	fi
 }
