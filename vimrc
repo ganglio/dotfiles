@@ -7,18 +7,20 @@ call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'
 Plugin 'sheerun/vim-polyglot'
 Plugin 'mattn/emmet-vim'
-Plugin 'atelierbram/vim-colors_duotones'
 
 call vundle#end()
 filetype plugin indent on
 " End Bundle
 
-source ~/.vim/duocolors.viml
-
 set t_Co=256
-hi CursorLine     cterm=BOLD ctermbg=003 ctermfg=NONE guibg=003 guifg=NONE
-hi CursorColumn   cterm=BOLD ctermbg=003 ctermfg=NONE guibg=003 guifg=NONE
+
+colorscheme duotone
+set background=dark
+
+hi CursorLine     cterm=BOLD ctermbg=001 ctermfg=NONE guibg=001 guifg=NONE
+hi CursorColumn   cterm=BOLD ctermbg=001 ctermfg=NONE guibg=001 guifg=NONE
 set cursorline! cursorcolumn!
+
 set backspace=2
 syn on
 set number
@@ -29,7 +31,7 @@ set shiftwidth=2
 set noexpandtab
 set list
 set listchars=tab:\|\ ,trail:·
-highlight MyTabs ctermbg=NONE ctermfg=003
+highlight MyTabs ctermbg=NONE ctermfg=001
 match MyTabs /\t/
 
 au BufReadPost Vagrantfile set syntax=ruby
