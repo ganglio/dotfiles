@@ -135,8 +135,9 @@ build_prompt() {
 }
 
 rprompt_itunes() {
+	itunes_running=$(ps ax | grep "[i]Tunes$" | wc -l)
 	type osascript 2>&1 > /dev/null
-	if [[ $? -eq 0 ]]; then
+	if [[ $? -eq 0 && itunes_running -gt 0 ]]; then
 		state=$(osascript -e 'tell application "iTunes" to player state as string')
 		if [ $state = 'playing' ]; then
 			artist=$(osascript -e 'tell application "iTunes" to artist of current track as string')

@@ -7,6 +7,7 @@ call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'
 Plugin 'sheerun/vim-polyglot'
 Plugin 'mattn/emmet-vim'
+Plugin 'atelierbram/vim-colors_duotones'
 
 call vundle#end()
 filetype plugin indent on
