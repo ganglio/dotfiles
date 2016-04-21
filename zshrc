@@ -34,6 +34,4 @@ export EDITOR='vim'
 
 export TERM=xterm-256color
 
-[[ -f ~/.dotfiles/zsh.conf/envdir/envdir ]] && source ~/.dotfiles/zsh.conf/envdir/envdir
-
 export LSCOLORS=fxDxcxdxFxegedabagacad

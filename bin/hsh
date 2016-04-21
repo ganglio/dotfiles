@@ -15,7 +15,7 @@ cmd=$@
 
 if [ -z "$cmd" ]; then
 	DIR=${$(pwd)//$HOME/\~}
-	echo "Connecting to vagrant into $DIR"
+	echo "Connecting to host into $DIR"
 	ssh -t $HOST_IP "cd $DIR 2>/dev/null || echo '$YELLOW$DIR$RESET not present on the host. Defaulting to $GREEN~$RESET'; zsh"
 else
 	echo "Executing \""$YELLOW$cmd$RESET"\""

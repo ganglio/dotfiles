@@ -122,10 +122,18 @@ function prompt_isssh() {
 	[[ -n "$SSH_CLIENT" ]] && prompt_segment $duotone_uno_02 $duotone_low_01 " "
 }
 
+function prompt_ismark() {
+	if [[ -d ~/.marks ]]; then
+		ismark=$(ls -l ~/.marks | awk -F " -> " '{print $2}' | grep "$(pwd)" | wc -l)
+		[[ $ismark -gt 0 ]] && prompt_segment $duotone_uno_02 $duotone_low_01 ""
+	fi
+}
+
 ## Main prompt
 build_prompt() {
 	RETVAL=$?
 	prompt_status
+	prompt_ismark
 	prompt_isssh
 	prompt_context
 	prompt_dir
