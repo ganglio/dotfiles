@@ -123,9 +123,13 @@ function prompt_isssh() {
 }
 
 function prompt_ismark() {
+	local marks_found
+	marks_found=0
 	if [[ -d ~/.marks ]]; then
-		ismark=$(ls -l ~/.marks | awk -F " -> " '{print $2}' | grep "$(pwd)" | wc -l)
-		[[ $ismark -gt 0 ]] && prompt_segment $duotone_uno_02 $duotone_low_01 ""
+		for mark in $(ls -l ~/.marks | awk -F " -> " '{print $2}'); do
+			[[ $(pwd | grep $mark | wc -l) -gt 0 ]] && let marks_found=$marks_found+1
+		done
+		[[ $marks_found -gt 0 ]] && prompt_segment $duotone_uno_02 $duotone_low_01 ""
 	fi
 }
 
