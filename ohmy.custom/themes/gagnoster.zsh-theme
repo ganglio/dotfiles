@@ -118,27 +118,38 @@ prompt_status() {
 	[[ -n "$symbols" ]] && prompt_segment $duotone_uno_01 $duotone_low_01 "$symbols"
 }
 
-function prompt_isssh() {
-	[[ -n "$SSH_CLIENT" ]] && prompt_segment $duotone_uno_02 $duotone_low_01 " "
-}
+function prompt_info() {
+	local symbols
+	symbols=()
 
-function prompt_ismark() {
+	# ssh
+	[[ -n "$SSH_CLIENT" ]] && symbols+=""
+
+	# marks
 	local marks_found
 	marks_found=0
 	if [[ -d ~/.marks ]]; then
 		for mark in $(ls -l ~/.marks | awk -F " -> " '{print $2}'); do
 			[[ $(pwd | grep $mark | wc -l) -gt 0 ]] && let marks_found=$marks_found+1
 		done
-		[[ $marks_found -gt 0 ]] && prompt_segment $duotone_uno_02 $duotone_low_01 ""
+		[[ $marks_found -gt 0 ]] && symbols+=""
 	fi
+
+	# direnv
+	type direnv 2>&1 > /dev/null
+	if [[ $? -eq 0 ]]; then
+		is_enved=$(direnv status | grep "Found" | wc -l)
+		[[ $is_enved -gt 0 ]] && symbols+=""
+	fi
+
+	[[ -n "$symbols" ]] && prompt_segment $duotone_uno_02 $duotone_low_01 "$symbols"
 }
 
 ## Main prompt
 build_prompt() {
 	RETVAL=$?
 	prompt_status
-	prompt_ismark
-	prompt_isssh
+	prompt_info
 	prompt_context
 	prompt_dir
 	prompt_vagrant
