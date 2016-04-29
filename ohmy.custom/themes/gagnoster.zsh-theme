@@ -174,7 +174,7 @@ rprompt_itunes() {
 
 rprompt_tmuxes() {
 	local tmuxes
-	tmuxes=$(tmux list-sessions 2> /dev/null | wc -l)
+	tmuxes=$(tmux list-sessions 2> /dev/null | grep -v "attached" | wc -l)
 	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_01 "  $tmuxes"
 }
 
