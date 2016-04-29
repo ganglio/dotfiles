@@ -138,7 +138,7 @@ function prompt_info() {
 	# direnv
 	type direnv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
-		is_enved=$(direnv status | grep "Found" | wc -l)
+		is_enved=$(direnv status 2>/dev/null | grep "Found" | wc -l)
 		[[ $is_enved -gt 0 ]] && symbols+=""
 	fi
 

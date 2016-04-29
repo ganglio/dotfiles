@@ -1,3 +1,9 @@
 #!/bin/zsh
 
 alias gitroot='cd ./$(git rev-parse --show-cdup)'
+
+if [[ $(uname) == 'Linux' ]]; then
+	alias direnv='~/.dotfiles/bin/direnv.linux-amd64'
+elif [[ $(uname) == 'Darwin' ]]; then
+	alias direnv='~/.dotfiles/bin/direnv.darwin-amd64'
+fi

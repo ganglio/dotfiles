@@ -29,3 +29,5 @@ autoload -Uz add-zsh-hook
 # Add hook for calling git-info before each command.
 add-zsh-hook preexec ganglio_preexec
 add-zsh-hook precmd ganglio_precmd
+
+[[ $(type direnv | grep "not found" | wc -l) -eq 0 ]] && eval "$(direnv hook zsh)"
