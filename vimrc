@@ -17,8 +17,8 @@ set t_Co=256
 colorscheme duotone
 set background=dark
 
-hi CursorLine     cterm=BOLD ctermbg=001 ctermfg=NONE guibg=001 guifg=NONE
-hi CursorColumn   cterm=BOLD ctermbg=001 ctermfg=NONE guibg=001 guifg=NONE
+hi CursorLine     cterm=BOLD ctermbg=001 ctermfg=NONE
+hi CursorColumn   cterm=BOLD ctermbg=001 ctermfg=NONE
 set cursorline! cursorcolumn!
 
 set backspace=2
