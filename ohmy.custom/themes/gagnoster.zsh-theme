@@ -106,7 +106,7 @@ prompt_vagrant() {
 		[[ -n "$vagrants" ]] && prompt_segment $duotone_uno_05 $duotone_low_01 $vagrants
 	else
 		if [[ -f /var/log/dmesg ]]; then # we are on linux
-			invm=$(cat /var/log/dmesg | grep -i paravirtualized | wc -l)
+			invm=$(cat /var/log/dmesg | grep -i paravirtualized | grep -i "bare hardware" | wc -l)
 			if [ $invm -gt 0 ]; then # and we are inside a VM
 				prompt_segment $duotone_uno_05 $duotone_low_01 "ᐱ"
 			fi
