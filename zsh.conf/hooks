@@ -13,7 +13,10 @@ function ganglio_precmd {
 			elapsed=">>> $ELAPSED"
 
 			ecolor=$duotone_uno_05
-			[[ "$RETVAL" -ne "0" ]] && ecolor=$duotone_duo_01
+			if [[ "$RETVAL" -ne "0" ]]; then
+				ecolor=$duotone_duo_01
+				elapsed=$RETVAL" "$elapsed
+			fi
 
 			now=$(date +%H:%M:%S)
 			hr $elapsed "" $now $ecolor "" $duotone_uno_01 $duotone_low_02

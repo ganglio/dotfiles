@@ -26,11 +26,27 @@ prompt_context() {
 
 # Checks if there are pending git actions (aheads and stashes)
 parse_git_pending() {
-	local pending
 	pending=()
-	[[ "$(git status 2> /dev/null | grep ahead | awk '{print $8;}')" != "" ]] && pending+='ahead'
-	[[ "$(git stash list)" != "" ]] && pending+='stash'
-	echo $pending
+
+	upstream=$(git rev-parse --symbolic-full-name --abbrev-ref @{upstream} 2> /dev/null)
+	current_commit_hash=$(git rev-parse HEAD 2> /dev/null)
+
+	has_upstream=0
+	[[ -n "${upstream}" && "${upstream}" != "@{upstream}" ]] && has_upstream=1
+
+	if [[ $has_upstream -gt 0 ]]; then
+
+		commits_diff="$(git log --pretty=oneline --topo-order --left-right ${current_commit_hash}...${upstream} 2> /dev/null)"
+		commits_ahead=$(grep -c "^<" <<< $commits_diff)
+		commits_behind=$(grep -c "^>" <<< $commits_diff)
+		number_of_stashes=$(git stash list -n1 2> /dev/null | wc -l)
+
+
+		[[ $commits_ahead -gt 0 ]]     && pending+=' ⍆'
+		[[ $commits_behind -gt 0 ]]    && pending+=' ⍅'
+		[[ $number_of_stashes -gt 0 ]] && pending+=' '
+		echo $pending
+	fi
 }
 
 # Git: branch/detached head, dirty status
@@ -40,8 +56,10 @@ prompt_git() {
 
 
 	if $(git rev-parse --is-inside-work-tree >/dev/null 2>&1); then
+
 		dirty=$(parse_git_dirty)
 		pending=$(parse_git_pending)
+
 		ref=$(git symbolic-ref HEAD 2> /dev/null) || ref="➦ $(git show-ref --head -s --abbrev |head -n1 2> /dev/null)"
 		if [[ -n $dirty ]]; then
 			prompt_segment $duotone_duo_04 $duotone_low_01
@@ -59,10 +77,6 @@ prompt_git() {
 			mode=" >R>"
 		fi
 
-		[[ "$(git status 2> /dev/null | grep ahead | awk '{print $8;}')" != "" ]] && ahead=" ⍆"
-
-		[[ "$(git stash list)" != "" ]] && stash=" "
-
 		setopt promptsubst
 		autoload -Uz vcs_info
 
@@ -74,7 +88,7 @@ prompt_git() {
 		zstyle ':vcs_info:*' formats ' %u%c'
 		zstyle ':vcs_info:*' actionformats ' %u%c'
 		vcs_info
-		echo -n "${ref/refs\/heads\// }${vcs_info_msg_0_%% }${mode}${ahead}${stash}"
+		echo -n "${ref/refs\/heads\// }${vcs_info_msg_0_%% }${mode}${pending}"
 	fi
 }
 

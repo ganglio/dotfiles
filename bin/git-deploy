@@ -73,6 +73,7 @@ main() {
 
 	# check and eventually push to origin
 	if [ $(git remote -v | grep "origin" | wc -l) -gt 0 ]; then
+		echo "Pushing to "$GREEN"origin"$RESET
 		git push --tags origin $1
 	else
 		echo "${GREEN}origin${RESET} not present. Not pushing."
@@ -80,6 +81,7 @@ main() {
 
 	# check and eventually push to deploy
 	if [ $(git remote -v | grep "deploy" | wc -l) -gt 0 ]; then
+		echo "Pushing to "$GREEN"deploy"$RESET
 		git push --tags deploy $1
 	else
 		echo "${GREEN}deploy${RESET} not present. Not pushing."
