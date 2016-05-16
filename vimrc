@@ -7,6 +7,8 @@ call vundle#begin()
 Plugin 'VundleVim/Vundle.vim'
 Plugin 'sheerun/vim-polyglot'
 Plugin 'mattn/emmet-vim'
+Plugin 'scrooloose/nerdtree'
+Plugin 'christoomey/vim-tmux-navigator'
 
 call vundle#end()
 filetype plugin indent on
@@ -51,3 +53,8 @@ autocmd InsertLeave * if expand('%') != '' | update | endif
 silent !mkdir ~/.vim_backups > /dev/null 2>&1
 set undodir=~/.vim_backups
 set undofile
+
+map <C-n> :NERDTreeToggle<CR>
+map <C-a> <C-w>
+
+map <C-w> :q<CR>
