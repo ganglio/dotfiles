@@ -15,12 +15,8 @@ echo "Creating backup files"
 echo "Cloning dotfiles"
 git clone https://github.com/ganglio/dotfiles.git ~/.dotfiles
 
-echo "Pulling submodules"
-OLD_PWD=$PWD
-cd ~/.dotfiles
-git submodule init
-git submodule update
-cd $OLD_PWD
+echo "Installing Vundle"
+[[ ! -d "~/.vim/bundle/Vundle.vim" ]] && git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
 
 echo "Cloning oh-my-zsh"
 git clone https://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
