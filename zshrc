@@ -9,6 +9,10 @@ ZSH_THEME="gagnoster"
 
 plugins=(git gem vagrant jump pyenv rbenv pip composer ffmpeg brew npm ipython)
 
+for plg in $(ls ~/.dotfiles/ohmy.custom/plugins); do
+	plugins+=($plg)
+done
+
 source $ZSH/oh-my-zsh.sh
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:~/.dotfiles/bin
