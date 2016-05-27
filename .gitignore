@@ -4,3 +4,6 @@
 .lastupdated
 npm-debug.log
 vim/bundle/**
+ohmy.custom/plugins
+!iohmy.custom/plugins/.gitkeep
+
