@@ -26,12 +26,10 @@ fi
 if [[ $total_machines -eq 1 ]]; then
   if [ $matched -eq 1 ]; then
     shift
-    machine_name=$(echo $running | grep $machine | awk -F '::' '{print $1}')
-  else
-    machine_data=(${(s/::/)running})
-    machine_id=$machine_data[2]
-    machine_name=$machine_data[1]
   fi
+  machine_data=(${(s/::/)running})
+  machine_id=$machine_data[2]
+  machine_name=$machine_data[1]
   cmd=$@
 else
   if [ $matched -ne 1 ]; then
@@ -50,9 +48,9 @@ else
 fi
 
 if [ -z "$cmd" ]; then
-  echo "Connecting to vagrant $GREEN$machine_name$RESET"
+  echo "Connecting to vagrant $GREEN$machine_name$RESET [$YELLOW$machine_id$RESET]"
   vagrant ssh $machine_id
 else
-  echo "Executing $YELLOW$cmd$RESET on $GREEN$machine_name$RESET"
+  echo "Executing $YELLOW$cmd$RESET on $GREEN$machine_name$RESET [$YELLOW$machine_id$RESET]"
   vagrant ssh $machine_id -c "$cmd"
 fi

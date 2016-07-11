@@ -49,7 +49,7 @@ getcurrentbranchtag() {
 		;;
 
 		*)
-			echo "You are in an undeployable branch '$RED$branch$RESET'. Please switch to either master or stage" 1&>2
+			echo "You are in an undeployable branch '$RED$branch$RESET'. Please switch to either master or stage" 1>&2
 			exit 1
 		;;
 	esac
