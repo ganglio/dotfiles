@@ -16,7 +16,9 @@ echo "Cloning dotfiles"
 git clone https://github.com/ganglio/dotfiles.git ~/.dotfiles
 
 echo "Installing Vundle"
-[[ ! -d "~/.vim/bundle/Vundle.vim" ]] && git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+if [[ ! -d "~/.vim/bundle/Vundle.vim" ]]; then
+	git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+fi
 
 echo "Cloning oh-my-zsh"
 git clone https://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
