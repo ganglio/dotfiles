@@ -16,8 +16,9 @@ filetype plugin indent on
 
 set t_Co=256
 
-colorscheme duotone
-set background=dark
+" colorscheme duotone
+" set background=dark
+colorscheme slate
 
 hi CursorLine     cterm=BOLD ctermbg=001 ctermfg=NONE
 hi CursorColumn   cterm=BOLD ctermbg=001 ctermfg=NONE
