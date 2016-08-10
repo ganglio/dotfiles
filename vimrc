@@ -55,6 +55,10 @@ set undodir=~/.vim_backups
 set undofile
 
 map <C-n> :NERDTreeToggle<CR>
-map <C-a> <C-w>
 
 map <C-w> :q<CR>
+
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTree") && b:NERDTree.isTabTree()) | q | endif
+
+autocmd VimEnter * NERDTree
+autocmd BufWinEnter * NERDTreeMirror
