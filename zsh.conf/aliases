@@ -5,7 +5,9 @@ alias gitroot='cd ./$(git rev-parse --show-cdup)'
 if [[ $(uname) == 'Linux' ]]; then
 	alias direnv='~/.dotfiles/bin/direnv.linux-amd64'
 	alias jq='~/.dotfiles/bin/jq-linux64'
+	ln -fs ~/.dotfiles/bin/jq-linux64 ~/.dotfiles/bin/jq
 elif [[ $(uname) == 'Darwin' ]]; then
 	alias direnv='~/.dotfiles/bin/direnv.darwin-amd64'
-	alias jq='~/.dotfiles/bin/jq-osx-darwin64'
+	alias jq='~/.dotfiles/bin/jq-osx-amd64'
+	ln -fs ~/.dotfiles/bin/jq-osx-amd64 ~/.dotfiles/bin/jq
 fi

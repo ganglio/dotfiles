@@ -39,12 +39,12 @@ parse_git_pending() {
 		commits_diff="$(git log --pretty=oneline --topo-order --left-right ${current_commit_hash}...${upstream} 2> /dev/null)"
 		commits_ahead=$(grep -c "^<" <<< $commits_diff)
 		commits_behind=$(grep -c "^>" <<< $commits_diff)
-		number_of_stashes=$(git stash list -n1 2> /dev/null | wc -l)
+		number_of_stashes=$(git stash list -n1 2> /dev/null | wc -l | bc)
 
 
-		[[ $commits_ahead -gt 0 ]]     && pending+=' ⍆'
-		[[ $commits_behind -gt 0 ]]    && pending+=' ⍅'
-		[[ $number_of_stashes -gt 0 ]] && pending+=' '
+		[[ $commits_behind -gt 0 ]]    && pending+=" ${commits_behind}⍅"
+		[[ $commits_ahead -gt 0 ]]     && pending+=" ${commits_ahead}⍆"
+		[[ $number_of_stashes -gt 0 ]] && pending+=" ${number_of_stashes}"
 		echo $pending
 	fi
 }
@@ -156,7 +156,18 @@ function prompt_info() {
 		[[ $is_enved -gt 0 ]] && symbols+=""
 	fi
 
-	[[ -n "$symbols" ]] && prompt_segment $duotone_uno_02 $duotone_low_01 "$symbols"
+	type docker 2>&1 > /dev/null
+	if [[ $? -eq 0 ]]; then
+		is_dockered=$(docker ps -a 2>/dev/null | tail -n+2 | wc -l | bc)
+		docker_up=$(docker ps -a 2>/dev/null | grep "Up" | wc -l | bc)
+		docker_created=$(docker ps -a 2>/dev/null | grep "Created" | wc -l | bc)
+		docker_exit=$(docker ps -a 2>/dev/null | grep "Exited" | wc -l | bc)
+		[[ $docker_up -gt 0 ]] && symbols+=${(l:${docker_up}:::)}
+		[[ $docker_created -gt 0 ]] && symbols+="%{%F{blue}%}"${(l:${docker_created}:::)}
+		[[ $docker_exit -gt 0 ]] && symbols+="%{%F{red}%}"${(l:${docker_exit}:::)}
+	fi
+
+	[[ -n "$symbols" ]] && prompt_segment cyan $duotone_low_01 "$symbols"
 }
 
 ## Main prompt

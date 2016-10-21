@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+# Usage: ./prowl.sh priority(-2 to 2) app event description
+# Example: ./prowl.sh 0 "transmission" "torrent has finished" "Coen Brothers Compilation has finised downloading"
+app=$1
+priority=$2
+event=$3
+description=$4
+
+if [ $# -ne 4 ]; then
+        echo "Usage: ./prowl.sh <app> <priority(-2 to 2)> <event> <description>"
+        echo 'Example: ./prowl.sh "transmission" 0 "torrent has finished" "Coen Brothers Compilation has finised downloading"'
+else
+	curl https://prowl.weks.net/publicapi/add -F apikey=$PROWL_API_KEY -F priority=$priority -F application="$app" -F event="$event" -F description="$description"
+fi
+
