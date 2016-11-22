@@ -9,6 +9,7 @@ Plugin 'sheerun/vim-polyglot'
 Plugin 'mattn/emmet-vim'
 Plugin 'scrooloose/nerdtree'
 Plugin 'christoomey/vim-tmux-navigator'
+Plugin 'dracula/vim'
 
 call vundle#end()
 filetype plugin indent on
@@ -16,9 +17,7 @@ filetype plugin indent on
 
 set t_Co=256
 
-" colorscheme duotone
-" set background=dark
-colorscheme slate
+colorscheme dracula
 
 hi CursorLine     cterm=BOLD ctermbg=001 ctermfg=NONE
 hi CursorColumn   cterm=BOLD ctermbg=001 ctermfg=NONE
@@ -26,8 +25,8 @@ set cursorline! cursorcolumn!
 
 set backspace=2
 syn on
-set number
 set relativenumber
+set number
 set scrolloff=8
 set tabstop=2
 set shiftwidth=2
