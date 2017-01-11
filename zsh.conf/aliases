@@ -1,5 +1,8 @@
 #!/bin/zsh
 
+[[ "$(which gls 2>&1 > /dev/null && echo $?)"!="0" ]] && alias ls='gls --color=auto'
+export LESS='-S -R'
+
 alias gitroot='cd ./$(git rev-parse --show-cdup)'
 
 if [[ $(uname) == 'Linux' ]]; then

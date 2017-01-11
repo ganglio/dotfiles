@@ -1,0 +1,3 @@
+#!/usr/bin/env zsh
+
+cat ~/.zsh_history | awk -F ";" '{print $2}' | awk '{print $1" "$2}' | grep "^git" | awk '{print $2}' | sort | uniq -c | sort -n
