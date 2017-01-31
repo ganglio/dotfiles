@@ -7,7 +7,7 @@ echo "Creating backup files"
 [ -f ~/.vimrc ] && cp ~/.vimrc ~/.vimrc.orig.$now
 [ -f ~/.tmux.conf ] && cp ~/.tmux.conf ~/.tmux.conf.orig.$now
 [ -f ~/.zcompdump ] && cp ~/.zcompdump ~/.zcompdump.orig.$now
-[ -f ~/.zshrc ] && cp ~/.curlrc ~/.curlrc.orig.$now
+[ -f ~/.curlrc ] && cp ~/.curlrc ~/.curlrc.orig.$now
 
 [ -d ~/.dotfiles ] && mv ~/.dotfiles ~/.dotfiles.orig-$now
 [ -d ~/.oh-my-zsh ] && mv ~/.oh-my-zsh ~/.oh-my-zsh.orig.$now
