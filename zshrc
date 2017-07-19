@@ -7,7 +7,7 @@ ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
 
 ZSH_THEME="gagnoster"
 
-plugins=(git gem vagrant jump pyenv rbenv pip composer brew npm ipython docker)
+plugins=(git vagrant jump pyenv rbenv pip composer npm ipython docker)
 
 for plg in $(ls ~/.dotfiles/ohmy.custom/plugins); do
 	plugins+=($plg)
