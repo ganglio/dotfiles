@@ -7,6 +7,7 @@ echo "Creating backup files"
 [ -f ~/.vimrc ] && cp ~/.vimrc ~/.vimrc.orig.$now
 [ -f ~/.tmux.conf ] && cp ~/.tmux.conf ~/.tmux.conf.orig.$now
 [ -f ~/.zcompdump ] && cp ~/.zcompdump ~/.zcompdump.orig.$now
+[ -f ~/.curlrc ] && cp ~/.curlrc ~/.curlrc.orig.$now
 
 [ -d ~/.dotfiles ] && mv ~/.dotfiles ~/.dotfiles.orig-$now
 [ -d ~/.oh-my-zsh ] && mv ~/.oh-my-zsh ~/.oh-my-zsh.orig.$now
@@ -28,6 +29,7 @@ ln -s ~/.dotfiles/zshrc ~/.zshrc
 ln -s ~/.dotfiles/vimrc ~/.vimrc
 ln -s ~/.dotfiles/vim ~/.vim
 ln -s ~/.dotfiles/tmux.conf ~/.tmux.conf
+ln -s ~/.dotfiles/curlrc ~/.curlrc
 
 # Initialising the autoupdate script
 date +%s > ~/.dotfiles/.lastupdated
