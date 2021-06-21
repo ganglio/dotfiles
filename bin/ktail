@@ -1,0 +1,6 @@
+#!/usr/bin/env zsh
+CLUSTER=$1
+SRV=$2
+shift
+shift
+stern --kubeconfig ~/.kube/robertot.$CLUSTER.yml -n $SRV $SRV $@

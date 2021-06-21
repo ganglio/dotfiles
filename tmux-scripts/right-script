@@ -17,7 +17,7 @@ rprompt_battery() {
 		if [[ $plugged != "Yes" ]]; then
 			symbol='🔋  '
 		else
-			symbol=''
+			symbol='🔌  '
 		fi
 
 		if [[ $charge -gt 50 ]]; then

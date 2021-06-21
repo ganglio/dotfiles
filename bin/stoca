@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+
+if [ $# -ne 1 ]; then
+  echo "Usage: stoca <port>"
+  exit -1
+fi
+
+ssh -R 9000:localhost:$1 ganglio -N -vvv

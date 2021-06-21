@@ -14,6 +14,8 @@
 source ~/.dotfiles/ohmy.custom/themes/lib.zsh-theme
 source ~/.dotfiles/ohmy.custom/themes/colors.zsh-theme
 
+export ZSH_THEME_TERM_TITLE_IDLE="%~"
+
 ### Prompt components
 # Each component will draw itself, and hide itself if no information needs to be shown
 
@@ -158,10 +160,11 @@ function prompt_info() {
 
 	type docker 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
-		is_dockered=$(docker ps -a 2>/dev/null | tail -n+2 | wc -l | bc)
-		docker_up=$(docker ps -a 2>/dev/null | grep "Up" | wc -l | bc)
-		docker_created=$(docker ps -a 2>/dev/null | grep "Created" | wc -l | bc)
-		docker_exit=$(docker ps -a 2>/dev/null | grep "Exited" | wc -l | bc)
+		dockerps=$(docker ps -a 2>/dev/null)
+		is_dockered=$(echo $dockerps | tail -n+2 | wc -l | bc)
+		docker_up=$(echo $dockerps | grep "Up" | wc -l | bc)
+		docker_created=$(echo $dockerps | grep "Created" | wc -l | bc)
+		docker_exit=$(echo $dockerps | grep "Exited" | wc -l | bc)
 		[[ $docker_up -gt 0 ]] && symbols+=${(l:${docker_up}:::)}
 		[[ $docker_created -gt 0 ]] && symbols+="%{%F{blue}%}"${(l:${docker_created}:::)}
 		[[ $docker_exit -gt 0 ]] && symbols+="%{%F{red}%}"${(l:${docker_exit}:::)}
@@ -199,7 +202,7 @@ rprompt_itunes() {
 
 rprompt_tmuxes() {
 	local tmuxes
-	tmuxes=$(tmux list-sessions 2> /dev/null | grep -v "attached" | wc -l)
+	tmuxes=$(tmux list-sessions 2> /dev/null | grep -v "attached" | wc -l | bc)
 	[[ $tmuxes -gt 0 ]] && rprompt_segment $duotone_duo_04 $duotone_low_01 "  $tmuxes"
 }
 
@@ -214,7 +217,7 @@ rprompt_rbenv() {
 rprompt_pyenv() {
 	type pyenv 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
-		version=$(pyenv local 2> /dev/null)
+		version=$(pyenv local 2>/dev/null | tr "\n" "+" | sed "s/\+$//g")
 		[[ -n "$version" ]] && rprompt_segment $duotone_duo_02 $duotone_low_01 "  $version"
 	fi
 }

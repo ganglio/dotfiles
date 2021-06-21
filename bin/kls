@@ -1,0 +1,7 @@
+#!/usr/bin/env zsh
+
+if [ "$#" -eq 1 ]; then
+  kube $1 get pods --all-namespaces
+else
+  kube $1 get pods --all-namespaces | grep $2
+fi

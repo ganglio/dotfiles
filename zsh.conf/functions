@@ -85,3 +85,6 @@ rainbow() {
 	print -P -- $reset_color
 }
 
+mocksrv() {
+	docker run --rm --name $1 --network test-network hashicorp/http-echo -listen=:80 -text="$1"
+}

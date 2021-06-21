@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+
+pod=$2
+frags=(${(s/-/)pod})
+len=$(( ${#frags[@]} - 2 ))
+ns=${(j/-/)frags[0,$len]}
+
+kube $1 logs -f -n $ns $pod

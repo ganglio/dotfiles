@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+
+if [ "$#" -ne 1 ]; then
+  echo "Usage: $0 <mysqlcontainer>" >&2
+  exit 1
+fi
+
+docker run -it --rm --name myadmin --link $1:db -p 8080:80 phpmyadmin/phpmyadmin

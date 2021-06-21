@@ -1,0 +1,5 @@
+#!/usr/bin/env zsh
+
+REGION=$1
+shift
+KUBECONFIG=~/.kube/robertot.$REGION.yml kubectl $@
