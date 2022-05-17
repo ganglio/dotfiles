@@ -227,12 +227,17 @@ rprompt_githash() {
 	[[ -n "$hh" ]] && rprompt_segment $duotone_duo_01 $duotone_low_01 " $hh"
 }
 
+rprompt_temp() {
+	tt=$(sysctl machdep.xcpm.cpu_thermal_level | awk '{print $2}')
+	[[ -n "$tt" ]] && rprompt_segment $duotone_duo_01 $duotone_low_01 "🌡  $tt"
+}
+
 build_rprompt() {
 	if [[ $COLUMNS -gt 100 ]]; then
 		rprompt_githash
 		rprompt_pyenv
 		rprompt_rbenv
-		rprompt_tmuxes
+		# rprompt_tmuxes
 		rprompt_itunes
 		rprompt_end
 	fi

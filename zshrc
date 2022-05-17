@@ -4,10 +4,11 @@ source ~/.dotfiles/update.sh
 
 ZSH=$HOME/.oh-my-zsh
 ZSH_CUSTOM=$HOME/.dotfiles/ohmy.custom
+ZSH_PYENV_QUIET=true
 
 ZSH_THEME="gagnoster"
 
-plugins=(git jump mypyenv pip npm docker)
+plugins=(git jump docker)
 
 for plg in $(ls ~/.dotfiles/ohmy.custom/plugins); do
 	plugins+=($plg)
@@ -41,7 +42,3 @@ export TERM=xterm-256color
 export LSCOLORS=fxDxcxdxFxegedabagacad
 
 direnv reload 2> /dev/null || true
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

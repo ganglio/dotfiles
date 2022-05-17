@@ -51,7 +51,7 @@ rprompt_online() {
 
 rprompt_online
 rprompt_battery
-# rprompt_segment black yellow "$(~/.dotfiles/bin/mem)"
+rprompt_segment black yellow "🌡  $(sysctl machdep.xcpm.cpu_thermal_level | awk '{print $2}')"
 # rprompt_segment black green "$(~/.dotfiles/bin/cpu)"
 [[ -n "$(~/.dotfiles/bin/vagrant-machines)" ]] && rprompt_segment black cyan "$(~/.dotfiles/bin/vagrant-machines)"
 rprompt_segment black white "$(date '+%H:%M:%S')"
