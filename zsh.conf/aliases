@@ -1,21 +1,6 @@
 #!/bin/zsh
 
-# [[ "$(which gls 2>&1 > /dev/null && echo $?)"!="0" ]] && alias ls='gls --color=auto'
 export LESS='-S -R'
-
-alias gitroot='cd ./$(git rev-parse --show-cdup)'
-
-if [[ $(uname) == 'Linux' ]]; then
-	alias direnv='~/.dotfiles/bin/direnv.linux-amd64'
-	alias jq='~/.dotfiles/bin/jq-linux64'
-	alias exa='~/.dotfiles/bin/exa-linux-x86_64'
-	ln -fs ~/.dotfiles/bin/jq-linux64 ~/.dotfiles/bin/jq
-elif [[ $(uname) == 'Darwin' ]]; then
-	alias direnv='~/.dotfiles/bin/direnv.darwin-amd64'
-	alias jq='~/.dotfiles/bin/jq-osx-amd64'
-	alias exa='~/.dotfiles/bin/exa-macos-x86_64'
-	ln -fs ~/.dotfiles/bin/jq-osx-amd64 ~/.dotfiles/bin/jq
-fi
 
 alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
 alias ls='exa'
