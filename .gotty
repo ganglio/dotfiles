@@ -1,0 +1,4 @@
+port = 8000
+title_format = "GoTTY - {{ .Command }} ({{ .Hostname }})"
+enable_reconnect = true
+reconnect_time = 1

@@ -1,7 +1,3 @@
 #!/usr/bin/env zsh
 
-while true; do
-  kls $1 $2
-  echo
-  sleep 1
-done
+viddy " kls $1 $2"
