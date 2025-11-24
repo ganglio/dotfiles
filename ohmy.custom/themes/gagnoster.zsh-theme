@@ -160,6 +160,7 @@ function prompt_info() {
 
 	type docker 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
+		# containers
 		dockerps=$(docker ps -a 2>/dev/null)
 		is_dockered=$(echo $dockerps | tail -n+2 | wc -l | bc)
 		docker_up=$(echo $dockerps | grep "Up" | wc -l | bc)
@@ -168,6 +169,11 @@ function prompt_info() {
 		[[ $docker_up -gt 0 ]] && symbols+=${(l:${docker_up}:::)}
 		[[ $docker_created -gt 0 ]] && symbols+="%{%F{blue}%}"${(l:${docker_created}:::)}
 		[[ $docker_exit -gt 0 ]] && symbols+="%{%F{red}%}"${(l:${docker_exit}:::)}
+
+		# models
+		docker_models=$(docker model list -q 2>/dev/null)
+		num_models=$(echo $docker_models | wc -l | bc)
+		[[ $num_models -gt 0 ]] && symbols+=" "${(l:${num_models}:::)}
 	fi
 
 	[[ -n "$symbols" ]] && prompt_segment cyan $duotone_low_01 "$symbols"
