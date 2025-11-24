@@ -3,5 +3,5 @@
 export LESS='-S -R'
 
 alias airport='/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport'
-alias ls='exa'
+alias ls='eza'
 alias portainer='docker run --rm --name portainer -p 5000:9000 -v /opt/portainer:/data -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer -H unix:///var/run/docker.sock'
