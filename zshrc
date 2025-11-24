@@ -8,7 +8,7 @@ ZSH_PYENV_QUIET=true
 
 ZSH_THEME="gagnoster"
 
-plugins=(git jump docker)
+plugins=(git jump docker pyenv direnv brew)
 
 for plg in $(ls ~/.dotfiles/ohmy.custom/plugins); do
 	plugins+=($plg)
@@ -41,4 +41,5 @@ export TERM=xterm-256color
 
 export LSCOLORS=fxDxcxdxFxegedabagacad
 
+export PATH=$PATH:$HOME/.dotfiles/bin
 direnv reload 2> /dev/null || true

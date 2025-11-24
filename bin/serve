@@ -19,6 +19,7 @@ Handler.extensions_map={
   '.css'      : 'text/css',
   '.js'       : 'application/x-javascript',
   '.wasm'     : 'application/wasm',
+  '.md'       : 'text/markdown; charset=UTF-8',
   ''          : 'application/octet-stream',
 }
 
