@@ -158,6 +158,10 @@ function prompt_info() {
 		[[ $is_enved -gt 0 ]] && symbols+=""
 	fi
 
+	[[ -n "$symbols" ]] && prompt_segment yellow $duotone_low_01 "$symbols"
+}
+
+function prompt_docker() {
 	type docker 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		# containers
@@ -172,8 +176,11 @@ function prompt_info() {
 
 		# models
 		docker_models=$(docker model list -q 2>/dev/null)
-		num_models=$(echo $docker_models | wc -l | bc)
-		[[ $num_models -gt 0 ]] && symbols+=" "${(l:${num_models}:::)}
+		if [[ $docker_models != "" ]]; then
+			num_models=$(echo $docker_models | wc -l | bc)
+			num_models=$((num_models * 2))
+			[[ $num_models -gt 0 ]] && symbols+="  %{%F{black}%}"${(l:${num_models}:: :)}
+		fi
 	fi
 
 	[[ -n "$symbols" ]] && prompt_segment cyan $duotone_low_01 "$symbols"
@@ -184,6 +191,7 @@ build_prompt() {
 	RETVAL=$?
 	prompt_status
 	prompt_info
+	prompt_docker
 	prompt_context
 	prompt_dir
 	prompt_vagrant
