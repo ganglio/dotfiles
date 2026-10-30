@@ -166,7 +166,7 @@ function prompt_docker() {
 	if [[ $? -eq 0 ]]; then
 		# containers
 		dockerps=$(docker ps -a 2>/dev/null)
-		is_dockered=$(echo $dockerps | tail -n+2 | wc -l | bc)
+		is_dockered=$(echo $dockerps | tail -n +2 | wc -l | bc)
 		docker_up=$(echo $dockerps | grep "Up" | wc -l | bc)
 		docker_created=$(echo $dockerps | grep "Created" | wc -l | bc)
 		docker_exit=$(echo $dockerps | grep "Exited" | wc -l | bc)
@@ -186,12 +186,26 @@ function prompt_docker() {
 	[[ -n "$symbols" ]] && prompt_segment cyan $duotone_low_01 "$symbols"
 }
 
+prompt_ollama() {
+	type ollama 2>&1 > /dev/null
+	if [[ $? -eq 0 ]]; then
+		ollls=$(ollama ls | tail -n+2 | wc -l | bc)
+		ollps=$(ollama ps | tail -n+2 | wc -l | bc)
+
+		[[ $ollps -gt 0 ]] && symbols+="%{%F{black}%}"${(l:${ollps}::O:)}
+		[[ $ollls -gt $ollps ]] && symbols+="%{%F{red}%}"${(l:(( ollls-ollps ))::X:)}
+		
+		[[ -n "$symbols" ]] && prompt_segment green $duotone_low_01 "$symbols"
+	fi
+}
+
 ## Main prompt
 build_prompt() {
 	RETVAL=$?
 	prompt_status
 	prompt_info
 	prompt_docker
+	prompt_ollama
 	prompt_context
 	prompt_dir
 	prompt_vagrant
@@ -246,13 +260,37 @@ rprompt_temp() {
 	[[ -n "$tt" ]] && rprompt_segment $duotone_duo_01 $duotone_low_01 "🌡  $tt"
 }
 
+rprompt_gcloud_project() {
+	project=$(gcloud config get project 2>&1)
+	[[ "$project" != "(unset)" ]] && rprompt_segment $duotone_duo_02 $duotone_low_01 "󱇶 $project"
+}
+
+echo "0" > /tmp/litellm_last_refresh
+echo "0" > /tmp/litellm_last_cost
+rprompt_litellm() {
+	if (( ${+LITELLM_KEY} )); then
+		last_refresh=$(cat /tmp/litellm_last_refresh)
+		last_cost=$(cat /tmp/litellm_last_cost)
+
+		elapsed=$(( (SECONDS-last_refresh) > 60 ))
+		if [[ (( $elapsed == 1 )) ]]; then
+			curl -s "https://litellm-proxy.p.shared.int/user/daily/activity/aggregated?start_date=`date "+%Y-%m-%d"`&end_date=`date "+%Y-%m-%d"`" -H "Authorization: Bearer $LITELLM_KEY" | jq ".metadata.total_spend" | tr "\n" "0" | xargs -0 printf "$%.2f" > /tmp/litellm_last_cost
+			echo $SECONDS > /tmp/litellm_last_refresh
+		fi
+		
+		cost=$(cat /tmp/litellm_last_cost)
+		[[ "$cost" != "0" ]] && rprompt_segment $duotone_duo_03 $duotone_low_01 "$cost"
+	fi
+}
+
 build_rprompt() {
 	if [[ $COLUMNS -gt 100 ]]; then
 		rprompt_githash
 		rprompt_pyenv
 		rprompt_rbenv
+		# rprompt_litellm
+		# rprompt_gcloud_project
 		# rprompt_tmuxes
-		rprompt_itunes
 		rprompt_end
 	fi
 }
