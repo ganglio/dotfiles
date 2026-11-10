@@ -187,6 +187,11 @@ function prompt_docker() {
 }
 
 prompt_ollama() {
+	isRunning=$(ps ax | grep '[o]llama serve' | wc -l)
+	if [[ $isRunning -eq 0 ]]; then
+		return
+	fi
+
 	type ollama 2>&1 > /dev/null
 	if [[ $? -eq 0 ]]; then
 		ollls=$(ollama ls | tail -n+2 | wc -l | bc)

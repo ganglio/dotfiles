@@ -23,7 +23,7 @@ export TERM=xterm-256color
 
 export LSCOLORS=fxDxcxdxFxegedabagacad
 
-export PATH=$PATH:$HOME/.dotfiles/bin:$HOME/bin
+export PATH=$PATH:$HOME/.dotfiles/bin:$HOME/bin:$HOME/.local/bin
 
 source $ZSH/oh-my-zsh.sh
 if [ -d ~/.dotfiles/zsh.conf/completions ]; then
