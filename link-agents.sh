@@ -3,6 +3,8 @@
 # agents read from. Safe to re-run: run it again after adding or removing a skill.
 #
 #   pi/models.json, pi/settings.json, pi/pi-jefferson.json -> ~/.pi/agent/
+#   pi/extensions/<file>             -> ~/.pi/agent/extensions/<file>  (one by one: other
+#                                       tools put their own files in that folder)
 #   agents/skills/<name>/            -> ~/.agents/skills/<name>  (pi, other agents)
 #                                    -> ~/.claude/skills/<name>  (Claude Code)
 #
@@ -29,8 +31,22 @@ for f in models.json settings.json pi-jefferson.json; do
 	link "$dotfiles/pi/$f" "$HOME/.pi/agent/$f"
 done
 
-echo "Linking skills"
 shopt -s nullglob
+
+echo "Linking pi extensions"
+for f in "$dotfiles"/pi/extensions/*.ts "$dotfiles"/pi/extensions/*.js; do
+	link "$f" "$HOME/.pi/agent/extensions/$(basename "$f")"
+done
+# Drop links to extensions that were removed from the dotfiles
+for l in "$HOME"/.pi/agent/extensions/*; do
+	if [ -L "$l" ] && [ ! -e "$l" ]; then
+		case "$(readlink "$l")" in
+			"$dotfiles"/pi/extensions/*) rm "$l" && echo "  removed stale link: $l" ;;
+		esac
+	fi
+done
+
+echo "Linking skills"
 skill_targets=("$HOME/.agents/skills" "$HOME/.claude/skills")
 
 for dir in "$dotfiles"/agents/skills/*/; do
