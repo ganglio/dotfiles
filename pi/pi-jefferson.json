@@ -21,7 +21,7 @@
     },
     "context": {
       "label": "",
-      "format": "[$bar] $percent",
+      "format": "$tokens [$bar] $percent",
       "style": { "fg": "success" }
     }
   }
