@@ -1,0 +1,28 @@
+{
+  "rowGap": 0,
+  "rows": [
+    {
+      "cells": [
+        { "instrument": "model" },
+        { "instrument": "thinking" },
+        { "instrument": "path" }
+      ]
+    },
+    {
+      "cells": [
+        { "instrument": "context" }
+      ]
+    }
+  ],
+  "instruments": {
+    "model": {
+      "label": "",
+      "style": { "fg": "accent", "bold": true }
+    },
+    "context": {
+      "label": "",
+      "format": "[$bar] $percent",
+      "style": { "fg": "success" }
+    }
+  }
+}

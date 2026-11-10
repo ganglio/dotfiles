@@ -1,0 +1,14 @@
+{
+  "defaultProvider": "ollama",
+  "defaultModel": "gemma4:31b",
+  "enabledModels": [
+    "ollama/*",
+    "remote/*"
+  ],
+  "enableAnalytics": false,
+  "enableInstallTelemetry": false,
+  "lastChangelogVersion": "1.5.1",
+  "packages": [
+    "npm:pi-jefferson@0.10.2"
+  ]
+}

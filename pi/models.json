@@ -1,0 +1,28 @@
+{
+  "providers": {
+    "ollama": {
+      "api": "openai-completions",
+      "apiKey": "ollama",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "models": [
+        {
+          "id": "gemma4:31b",
+          "input": ["text", "image"],
+          "reasoning": true
+        }
+      ]
+    },
+    "remote": {
+      "api": "openai-completions",
+      "apiKey": "$REMOTE_LLM_KEY",
+      "baseUrl": "$REMOTE_LLM_URL",
+      "models": [
+        {
+          "id": "qwen3-coder:30b",
+          "input": ["text"],
+          "reasoning": false
+        }
+      ]
+    }
+  }
+}
