@@ -1,0 +1,66 @@
+<!-- Mermaid, rendered in the browser at page load. Pinned version with an integrity hash. -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"
+        integrity="sha384-HHW54r639fK42Ip0coGF3mz8oSiGn0eEoWNTLs75X7H63pLSDBa0Tqs0RwGmLlXE"
+        crossorigin="anonymous" defer></script>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var nodes = Array.prototype.slice.call(document.querySelectorAll("pre.mermaid"));
+    var sources = nodes.map(function (n) { return n.textContent; });
+    var seq = 0, loaded = false, running = false, again = false;
+    var dark = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function isDark() {
+      var t = root.getAttribute("data-theme");
+      return t ? t === "dark" : dark.matches;
+    }
+
+    // A note under the diagram; the source stays visible next to it.
+    function note(node, text) {
+      var box = node.parentNode;
+      var p = box.querySelector(".diagram-note");
+      if (!text) { if (p) p.remove(); return; }
+      if (!p) { p = document.createElement("p"); p.className = "diagram-note"; box.appendChild(p); }
+      p.textContent = text;
+    }
+
+    async function renderAll() {
+      if (!loaded) return;
+      var mermaid = window.mermaid;
+      if (!mermaid) {
+        nodes.forEach(function (n) { note(n, "Diagram not rendered: the mermaid library could not be loaded (offline?). Showing its source."); });
+        return;
+      }
+      if (running) { again = true; return; }
+      running = true;
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: isDark() ? "dark" : "default",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+      });
+      for (var i = 0; i < nodes.length; i++) {
+        var id = "mmd-" + (seq++);
+        try {
+          var out = await mermaid.render(id, sources[i]);
+          nodes[i].innerHTML = out.svg;
+          nodes[i].classList.add("rendered");
+          note(nodes[i], "");
+        } catch (e) {
+          var stray = document.getElementById("d" + id);
+          if (stray) stray.remove();
+          nodes[i].classList.remove("rendered");
+          nodes[i].textContent = sources[i];
+          note(nodes[i], "Diagram not rendered: " + String(e && e.message || e).split("\n")[0]);
+        }
+      }
+      running = false;
+      if (again) { again = false; renderAll(); }
+    }
+
+    window.addEventListener("load", function () { loaded = true; renderAll(); });
+    // Re-render with the matching diagram theme when the page theme changes.
+    new MutationObserver(renderAll).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    try { dark.addEventListener("change", renderAll); } catch (e) {}
+  })();
+</script>

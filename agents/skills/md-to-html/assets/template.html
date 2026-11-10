@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<script>
+  // Runs before first paint so a saved theme or font size never flashes.
+  (function () {
+    var d = document.documentElement;
+    d.classList.add("js");
+    try {
+      var t = localStorage.getItem("md-theme");
+      if (t === "dark" || t === "light") d.setAttribute("data-theme", t);
+      var s = parseFloat(localStorage.getItem("md-scale"));
+      if (s >= 0.8 && s <= 1.6) d.style.setProperty("--scale", s);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --fg: #1f2328;
+    --muted: #59636e;
+    --border: #d1d9e0;
+    --subtle: #f6f8fa;
+    --link: #0969da;
+    --accent: #0969da;
+    --bar-bg: rgba(255, 255, 255, 0.85);
+    --ctl-active-bg: #1f2328;
+    --ctl-active-fg: #ffffff;
+    --mark: #fff8c5;
+    --hl-kw: #cf222e;
+    --hl-str: #0a3069;
+    --hl-num: #0550ae;
+    --hl-title: #8250df;
+    --hl-com: #59636e;
+    --hl-tag: #116329;
+    --hl-attr: #0550ae;
+    --hl-built: #953800;
+    --hl-add-bg: #dafbe1;
+    --hl-del-bg: #ffebe9;
+    --scale: 1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --fg: #e6edf3;
+      --muted: #9198a1;
+      --border: #3d444d;
+      --subtle: #151b23;
+      --link: #4493f8;
+      --accent: #4493f8;
+      --bar-bg: rgba(13, 17, 23, 0.85);
+      --ctl-active-bg: #e6edf3;
+      --ctl-active-fg: #0d1117;
+      --mark: #4d3b00;
+      --hl-kw: #ff7b72;
+      --hl-str: #a5d6ff;
+      --hl-num: #79c0ff;
+      --hl-title: #d2a8ff;
+      --hl-com: #9198a1;
+      --hl-tag: #7ee787;
+      --hl-attr: #79c0ff;
+      --hl-built: #ffa657;
+      --hl-add-bg: #12261e;
+      --hl-del-bg: #2d1214;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --subtle: #151b23;
+    --link: #4493f8;
+    --accent: #4493f8;
+    --bar-bg: rgba(13, 17, 23, 0.85);
+    --ctl-active-bg: #e6edf3;
+    --ctl-active-fg: #0d1117;
+    --mark: #4d3b00;
+    --hl-kw: #ff7b72;
+    --hl-str: #a5d6ff;
+    --hl-num: #79c0ff;
+    --hl-title: #d2a8ff;
+    --hl-com: #9198a1;
+    --hl-tag: #7ee787;
+    --hl-attr: #79c0ff;
+    --hl-built: #ffa657;
+    --hl-add-bg: #12261e;
+    --hl-del-bg: #2d1214;
+  }
+
+  html { font-size: calc(var(--scale, 1) * 100%); -webkit-text-size-adjust: 100%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ---- toolbar ---- */
+  .toolbar {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: var(--bar-bg);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8125rem;
+    line-height: 1;
+  }
+  .js .toolbar { display: flex; }
+  .group {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .toolbar button {
+    appearance: none;
+    border: 0;
+    margin: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
+    min-width: 2rem;
+  }
+  .toolbar button + button { border-left: 1px solid var(--border); }
+  .toolbar button:hover:not(:disabled):not([aria-checked="true"]) { background: var(--subtle); color: var(--fg); }
+  .toolbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .toolbar button:disabled { opacity: 0.35; cursor: default; }
+  .toolbar button[aria-checked="true"] { background: var(--ctl-active-bg); color: var(--ctl-active-fg); }
+  #fs-down, #fs-up { font-size: 1rem; font-weight: 600; }
+  #fs-value { min-width: 3.4rem; font-variant-numeric: tabular-nums; }
+
+  /* ---- content ---- */
+  main { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; overflow-wrap: break-word; }
+  @media (min-width: 700px) { main { padding-top: 3rem; } }
+
+  main > :first-child { margin-top: 0; }
+  p, ul, ol, blockquote, pre, table, details, .table-wrap { margin: 0 0 1.1em; }
+
+  h1, h2, h3, h4, h5, h6 {
+    position: relative;
+    margin: 1.9em 0 0.6em;
+    line-height: 1.25;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    scroll-margin-top: 4rem;
+  }
+  h1 { font-size: 2.1em; letter-spacing: -0.02em; margin-top: 0.4em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 1.55em; padding-bottom: 0.25em; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1.05em; }
+  h5, h6 { font-size: 0.95em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .anchor {
+    position: absolute;
+    left: -1.1em;
+    width: 1em;
+    color: var(--muted);
+    text-decoration: none;
+    opacity: 0;
+    font-weight: 400;
+  }
+  h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus { opacity: 0.7; }
+
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 0.15em; }
+  strong { font-weight: 650; }
+  mark { background: var(--mark); color: inherit; padding: 0 0.15em; border-radius: 0.2em; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 2.2em 0; }
+  img, video { max-width: 100%; height: auto; border-radius: 0.4rem; }
+
+  ul, ol { padding-left: 1.6em; }
+  li + li { margin-top: 0.25em; }
+  li > ul, li > ol { margin: 0.25em 0 0; }
+  li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.3em; }
+  input[type="checkbox"] { margin: 0 0.5em 0.1em 0; accent-color: var(--accent); vertical-align: middle; }
+
+  blockquote {
+    padding: 0.1em 1em;
+    color: var(--muted);
+    border-left: 0.25em solid var(--border);
+  }
+  blockquote > :last-child { margin-bottom: 0; }
+
+  code, pre, kbd, samp {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.875em;
+  }
+  :not(pre) > code {
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    border-radius: 0.35rem;
+    padding: 0.12em 0.4em;
+  }
+  pre {
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 0.9rem 1.1rem;
+    overflow: auto;
+    line-height: 1.5;
+    tab-size: 4;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: 1em; }
+
+  /* ---- syntax highlighting (tokens are emitted by highlight.js at build time) ---- */
+  .hljs { color: var(--fg); }
+  .hljs-comment, .hljs-quote { color: var(--hl-com); font-style: italic; }
+  .hljs-keyword, .hljs-doctag, .hljs-template-tag, .hljs-template-variable, .hljs-type,
+  .hljs-selector-tag, .hljs-meta .hljs-keyword { color: var(--hl-kw); }
+  .hljs-string, .hljs-regexp, .hljs-meta .hljs-string { color: var(--hl-str); }
+  .hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet, .hljs-variable.constant_,
+  .hljs-link { color: var(--hl-num); }
+  .hljs-title, .hljs-title.class_, .hljs-title.function_, .hljs-section { color: var(--hl-title); }
+  .hljs-attr, .hljs-attribute, .hljs-property, .hljs-variable, .hljs-params,
+  .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id, .hljs-selector-pseudo { color: var(--hl-attr); }
+  .hljs-tag, .hljs-name { color: var(--hl-tag); }
+  .hljs-built_in, .hljs-meta { color: var(--hl-built); }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 650; }
+  .hljs-addition { color: var(--hl-tag); background: var(--hl-add-bg); display: inline-block; width: 100%; }
+  .hljs-deletion { color: var(--hl-kw); background: var(--hl-del-bg); display: inline-block; width: 100%; }
+
+  /* ---- mermaid diagrams (rendered in the browser; the source shows until then) ---- */
+  .diagram { margin: 0 0 1.1em; }
+  .diagram pre.mermaid.rendered { background: none; border: 0; padding: 0.25rem 0; text-align: center; line-height: 1; }
+  .diagram pre.mermaid.rendered svg { max-width: 100%; height: auto; }
+  .diagram .diagram-note { margin: 0.4em 0 0; font-size: 0.8125rem; color: var(--muted); }
+  kbd {
+    background: var(--subtle);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 0.3rem;
+    padding: 0.05em 0.4em;
+  }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 0.6rem; }
+  table { border-collapse: collapse; width: 100%; margin: 0; font-size: 0.95em; }
+  th, td { padding: 0.55em 0.9em; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-weight: 650; background: var(--subtle); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:nth-child(even) td { background: var(--subtle); }
+
+  details { border: 1px solid var(--border); border-radius: 0.6rem; padding: 0.6em 1em; }
+  summary { cursor: pointer; font-weight: 600; }
+
+  @media print {
+    .toolbar { display: none !important; }
+    main { max-width: none; padding: 0; }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<nav class="toolbar" aria-label="Display settings">
+  <div class="group" role="group" aria-label="Font size">
+    <button type="button" id="fs-down" aria-label="Decrease font size" title="Decrease font size">&minus;</button>
+    <button type="button" id="fs-value" aria-label="Reset font size" title="Reset font size">100%</button>
+    <button type="button" id="fs-up" aria-label="Increase font size" title="Increase font size">+</button>
+  </div>
+  <div class="group" role="radiogroup" aria-label="Color theme">
+    <button type="button" role="radio" data-theme-choice="auto" aria-checked="true" title="Follow the system setting">Auto</button>
+    <button type="button" role="radio" data-theme-choice="dark" aria-checked="false" title="Dark theme">Dark</button>
+    <button type="button" role="radio" data-theme-choice="light" aria-checked="false" title="Light theme">Light</button>
+  </div>
+</nav>
+<main>
+{{CONTENT}}
+</main>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var MIN = 0.8, MAX = 1.6, STEP = 0.1;
+
+    function store(key, value) {
+      try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (e) {}
+    }
+
+    // ---- font size ----
+    var down = document.getElementById("fs-down");
+    var up = document.getElementById("fs-up");
+    var label = document.getElementById("fs-value");
+    var scale = parseFloat(getComputedStyle(root).getPropertyValue("--scale")) || 1;
+
+    function setScale(next) {
+      scale = Math.min(MAX, Math.max(MIN, Math.round(next * 10) / 10));
+      root.style.setProperty("--scale", scale);
+      label.textContent = Math.round(scale * 100) + "%";
+      down.disabled = scale <= MIN;
+      up.disabled = scale >= MAX;
+      store("md-scale", scale === 1 ? null : String(scale));
+    }
+    down.addEventListener("click", function () { setScale(scale - STEP); });
+    up.addEventListener("click", function () { setScale(scale + STEP); });
+    label.addEventListener("click", function () { setScale(1); });
+    setScale(scale);
+
+    // ---- theme: auto (system) / dark / light ----
+    var choices = Array.prototype.slice.call(document.querySelectorAll("[data-theme-choice]"));
+
+    function setTheme(choice) {
+      if (choice === "dark" || choice === "light") root.setAttribute("data-theme", choice);
+      else { choice = "auto"; root.removeAttribute("data-theme"); }
+      choices.forEach(function (b) {
+        b.setAttribute("aria-checked", String(b.getAttribute("data-theme-choice") === choice));
+        b.tabIndex = b.getAttribute("data-theme-choice") === choice ? 0 : -1;
+      });
+      store("md-theme", choice === "auto" ? null : choice);
+    }
+    choices.forEach(function (b, i) {
+      b.addEventListener("click", function () { setTheme(b.getAttribute("data-theme-choice")); });
+      b.addEventListener("keydown", function (e) {
+        var d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        var n = choices[(i + d + choices.length) % choices.length];
+        setTheme(n.getAttribute("data-theme-choice"));
+        n.focus();
+      });
+    });
+    setTheme(root.getAttribute("data-theme") || "auto");
+  })();
+</script>
+{{MERMAID}}
+</body>
+</html>
