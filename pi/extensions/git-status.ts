@@ -41,6 +41,10 @@ const UNTRACKED = "?"; // the prompt has none; "?" is what git status --short us
 const POLL_MS = 5000;
 // 0 = the footer's last row, 1 = the row above it. Matches the 2-row pi-jefferson layout.
 const ROWS_FROM_BOTTOM = 1;
+// The side pane (side-pane.ts) publishes the width of its dock here and announces changes on the
+// event bus, so this line can stay in the footer instead of landing on the pane.
+const DOCK_KEY = Symbol.for("pi.side-pane.dock");
+const DOCK_EVENT = "side-pane:dock";
 const GAP = "  ";
 const MAX_TEXT_WIDTH = 60;
 const MIN_BRANCH_WIDTH = 8;
@@ -135,7 +139,8 @@ export default function (pi: ExtensionAPI) {
     stop(); // a reload starts a new session: never leave two overlays behind
 
     let shown: Segment[] = [];
-    let mounted: { width: number; minTerminal: number } | undefined;
+    let mounted: { width: number; minTerminal: number; dock: number } | undefined;
+    let again = false; // a refresh was requested while one was running
     let requestRender: (() => void) | undefined;
     let busy = false;
 
@@ -214,12 +219,18 @@ export default function (pi: ExtensionAPI) {
       shown = [];
     }
 
-    // pi reads the overlay options once, so a different width means a new overlay.
-    function mount(width: number, minTerminal: number) {
+    // Columns the side pane's dock takes at the right of the window (0 = none, or no side pane).
+    const dockCols = (): number => {
+      const dock = (globalThis as Record<symbol, { cols?: () => number } | undefined>)[DOCK_KEY];
+      return dock?.cols?.() ?? 0;
+    };
+
+    // pi reads the overlay options once, so a different width or dock means a new overlay.
+    function mount(width: number, minTerminal: number, dock: number) {
       // Only drop the old overlay: `shown` was just set by the caller and must survive.
       dispose?.();
       dispose = undefined;
-      mounted = { width, minTerminal };
+      mounted = { width, minTerminal, dock };
       // Not awaited: the promise only resolves when the overlay is disposed.
       void ctx.ui.custom<void>(
         (tui, theme, _keybindings, done) => {
@@ -241,6 +252,7 @@ export default function (pi: ExtensionAPI) {
           overlay: true,
           overlayOptions: {
             anchor: "bottom-right",
+            offsetX: -dock, // the footer ends where the dock starts
             offsetY: -ROWS_FROM_BOTTOM,
             width,
             visible: (termWidth: number) => termWidth >= (mounted?.minTerminal ?? Infinity),
@@ -251,28 +263,37 @@ export default function (pi: ExtensionAPI) {
     }
 
     refreshNow = async () => {
-      if (busy) return;
+      if (busy) {
+        again = true;
+        return;
+      }
       busy = true;
       try {
         const info = await readInfo();
         if (!info) return unmount();
 
-        const columns = process.stdout.columns || 120;
+        // With the side pane docked, the footer only has the columns left of the dock.
+        const dock = dockCols();
+        const columns = (process.stdout.columns || 120) - dock;
         const left = leftWidth();
         const budget = Math.min(MAX_TEXT_WIDTH, columns - left - 3 - 2);
         const fitted = fit(buildSegments(info), budget);
         if (!fitted) return unmount();
 
         const width = totalWidth(fitted) + 2; // one trailing space plus one column of slack for wide glyphs
-        const minTerminal = left + 3 + width;
+        const minTerminal = left + 3 + width + dock;
         shown = fitted;
-        if (!mounted || mounted.width !== width) mount(width, minTerminal);
+        if (!mounted || mounted.width !== width || mounted.dock !== dock) mount(width, minTerminal, dock);
         else {
           mounted.minTerminal = minTerminal;
           requestRender?.();
         }
       } finally {
         busy = false;
+        if (again) {
+          again = false;
+          void refreshNow?.();
+        }
       }
     };
 
@@ -282,5 +303,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_end", () => void refreshNow?.());
   pi.on("model_select", () => void refreshNow?.());
+  // The side pane docked, resized or went away: move the line to the footer's new right edge.
+  pi.events.on(DOCK_EVENT, () => void refreshNow?.());
   pi.on("session_shutdown", () => stop());
 }
