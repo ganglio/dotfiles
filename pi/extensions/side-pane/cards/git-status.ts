@@ -102,7 +102,7 @@ const card: CardFactory = (config, env) => {
       tree = { branch: branch?.trim() || undefined, ...parsed };
     },
 
-    render(width, theme) {
+    render(width, theme, height) {
       if (failed || !tree) return [theme.fg("dim", "git status unavailable")];
       const rows: { marker: string; color: string; file: FileEntry }[] = [
         ...tree.conflicts.map((file) => ({ marker: "!", color: "error", file })),
@@ -112,7 +112,9 @@ const card: CardFactory = (config, env) => {
       ];
       if (rows.length === 0) return [theme.fg("success", "Working tree clean")];
 
-      const lines = rows.slice(0, maxFiles).map(({ marker, color, file }) => {
+      // With "fill" the pane says how many rows there are: show as many files as fit.
+      const limit = height === undefined ? maxFiles : rows.length <= height ? rows.length : Math.max(1, height - 1);
+      const lines = rows.slice(0, limit).map(({ marker, color, file }) => {
         const hasStat = file.add !== undefined && file.del !== undefined;
         const statPlain = hasStat ? `+${file.add} −${file.del}` : "";
         const statStyled = hasStat ? `${theme.fg("success", `+${file.add}`)} ${theme.fg("error", `−${file.del}`)}` : "";
@@ -121,7 +123,7 @@ const card: CardFactory = (config, env) => {
         const gap = " ".repeat(Math.max(1, width - 2 - visibleWidth(path) - visibleWidth(statPlain)));
         return `${theme.fg(color as never, marker)} ${path}${hasStat ? gap + statStyled : ""}`;
       });
-      if (rows.length > maxFiles) lines.push(theme.fg("dim", `… and ${rows.length - maxFiles} more`));
+      if (rows.length > limit) lines.push(theme.fg("dim", `… and ${rows.length - limit} more`));
       return lines;
     },
 

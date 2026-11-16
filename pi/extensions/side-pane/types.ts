@@ -11,6 +11,9 @@ export interface CardConfig {
   enabled?: boolean;
   // true = the card starts collapsed.
   collapsed?: boolean;
+  // true = the card grows to take the free rows of the pane. When several open cards have it, they
+  // share the free rows evenly.
+  fill?: boolean;
   [option: string]: unknown;
 }
 
@@ -21,6 +24,17 @@ export interface CardEnv {
   cwd: string;
   // Files the agent wrote or edited in this session: absolute path -> how often, and when last.
   touched: Map<string, { count: number; at: number }>;
+  // Subscribes to a pi event (the same event object an extension would get from pi.on) for as long
+  // as the card lives. The events on offer: before_agent_start, agent_start, agent_end, turn_start,
+  // turn_end, message_start, message_update, message_end, tool_execution_start,
+  // tool_execution_end, tool_call, tool_result. A handler that throws is ignored.
+  on(event: string, handler: (event: any) => void): void;
+  // Asks the pane to redraw, for state that changed outside refresh(). Calls are coalesced to
+  // about 15 redraws a second, so it is safe to call on every streamed token.
+  repaint(): void;
+  // The entries of the current session branch, oldest first (same data as
+  // ctx.sessionManager.getBranch()). For rebuilding a card's state after /reload or a resume.
+  sessionEntries(): unknown[];
 }
 
 export interface Card {
@@ -32,7 +46,9 @@ export interface Card {
   available?(): boolean;
   refresh(): Promise<void>;
   // Content lines for the given inner width; the pane draws the frame around them.
-  render(width: number, theme: Theme): string[];
+  // `height` is only given to a card with "fill": the rows the pane gives its body. Use them if the
+  // card can show more (the pane pads the body, or cuts it, to exactly that many rows).
+  render(width: number, theme: Theme, height?: number): string[];
   // Optional: one line (may be styled) shown after the title while the card is collapsed.
   summary?(theme: Theme): string | undefined;
 }

@@ -96,10 +96,10 @@ export function saveCards(cards: CardConfig[]): string | undefined {
       return `Not saved: side-pane.json is not valid JSON (${e instanceof Error ? e.message : String(e)}). Fix it by hand first.`;
     }
   }
-  // "enabled": true is the default: leave it out so the file stays tidy.
+  // "enabled": true and "fill": false are the defaults: leave them out so the file stays tidy.
   current.cards = cards.map((c) => {
-    const { enabled, ...rest } = c;
-    return enabled === false ? { ...rest, enabled: false } : rest;
+    const { enabled, fill, ...rest } = c;
+    return { ...rest, ...(fill === true ? { fill: true } : {}), ...(enabled === false ? { enabled: false } : {}) };
   });
   try {
     writeFileSync(path, JSON.stringify(current, null, 2) + "\n");

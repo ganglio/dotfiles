@@ -25,17 +25,19 @@ const card: CardFactory = (config, env) => {
     // No dependency: always shown, even when empty.
     async refresh() {},
 
-    render(width, theme) {
+    render(width, theme, height) {
       const rows = newestFirst();
       if (rows.length === 0) return [theme.fg("dim", "No edits yet.")];
-      const lines = rows.slice(0, maxFiles).map(([path, { count, at }]) => {
+      // With "fill" the pane says how many rows there are: show as many files as fit.
+      const limit = height === undefined ? maxFiles : rows.length <= height ? rows.length : Math.max(1, height - 1);
+      const lines = rows.slice(0, limit).map(([path, { count, at }]) => {
         const right = [count > 1 ? `×${count}` : "", age(at)].filter(Boolean).join(" ");
         const room = Math.max(4, width - (right ? visibleWidth(right) + 1 : 0));
         const text = truncateLeft(shorten(path), room);
         const gap = " ".repeat(Math.max(1, width - visibleWidth(text) - visibleWidth(right)));
         return right ? text + gap + theme.fg("dim", right) : text;
       });
-      if (rows.length > maxFiles) lines.push(theme.fg("dim", `… and ${rows.length - maxFiles} more`));
+      if (rows.length > limit) lines.push(theme.fg("dim", `… and ${rows.length - limit} more`));
       return lines;
     },
 

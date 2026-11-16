@@ -66,8 +66,11 @@
 //     "cards": [ { "type": "git-log", "count": 3 }, { "type": "ollama", "enabled": false } ]
 //   }
 //
-// Every card entry accepts "type", "title", "enabled" and "collapsed", plus the options of its
-// own type (documented at the top of its file in cards/).
+// Every card entry accepts "type", "title", "enabled", "collapsed" and "fill", plus the options of
+// its own type (documented at the top of its file in cards/). "fill": true makes an open card grow
+// to take the rows the others leave free; several such cards share those rows evenly. Cards that
+// can show more when they have room (working tree, agent edits, thinking) use it; the others are
+// padded. In the overlay the pane grows to its maxHeight.
 //
 // Dependencies: a card whose dependency is not met is not drawn at all, and when no card is
 // available the whole pane disappears. They come back by themselves, at the next refresh.
@@ -125,6 +128,35 @@ export default async function (pi: ExtensionAPI) {
   const cardTypes: Map<string, CardType> = found.types;
   const discoveryErrors: string[] = found.errors;
 
+  // Events cards can subscribe to with env.on(). Pi gets one handler per event, which fans out to the
+  // cards of the current session. The handlers never return anything, so pi's own flow is untouched.
+  const CARD_EVENTS = [
+    "before_agent_start",
+    "agent_start",
+    "agent_end",
+    "turn_start",
+    "turn_end",
+    "message_start",
+    "message_update",
+    "message_end",
+    "tool_execution_start",
+    "tool_execution_end",
+    "tool_call",
+    "tool_result",
+  ];
+  const listeners = new Map<string, Set<(event: any) => void>>();
+  for (const name of CARD_EVENTS) {
+    (pi as any).on(name, (event: unknown) => {
+      for (const handler of listeners.get(name) ?? []) {
+        try {
+          handler(event);
+        } catch {
+          // a card's bug is not the pane's
+        }
+      }
+    });
+  }
+
   let pane: Pane | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
   let dispose: (() => void) | undefined;
@@ -138,6 +170,7 @@ export default async function (pi: ExtensionAPI) {
     timer = undefined;
     refreshAll = undefined;
     repaint = undefined;
+    listeners.clear();
     teardown?.(); // puts pi's own layout back and removes the overlay and the widget
     teardown = undefined;
     dispose?.();
@@ -229,6 +262,7 @@ export default async function (pi: ExtensionAPI) {
       cfg: CardConfig;
       card: Card;
       collapsed: boolean;
+      dispose: () => void; // drops the card's event subscriptions
     }
     let entries: Entry[] = [];
     let headerRows: { row: number; card: number }[] = []; // header row of each drawn card, for clicks
@@ -277,7 +311,26 @@ export default async function (pi: ExtensionAPI) {
       },
       cwd: ctx.cwd,
       touched,
+      on() {}, // each card gets its own, see buildEntry
+      repaint: () => coalescedRepaint(),
+      sessionEntries: () => {
+        try {
+          return ctx.sessionManager.getBranch() as unknown[];
+        } catch {
+          return [];
+        }
+      },
     };
+
+    // Redraws at most about 15 times a second, however often cards ask (a streamed token each).
+    let repaintTimer: ReturnType<typeof setTimeout> | undefined;
+    function coalescedRepaint() {
+      if (repaintTimer) return;
+      repaintTimer = setTimeout(() => {
+        repaintTimer = undefined;
+        requestRender?.();
+      }, 66);
+    }
 
     // A card that only shows a message: a type nobody provides, or a factory that threw.
     const noteCard = (title: string, message: (theme: Theme, width: number) => string[]): Card => ({
@@ -288,10 +341,20 @@ export default async function (pi: ExtensionAPI) {
 
     function buildEntry(cfg: CardConfig): Entry {
       const type = cardTypes.get(cfg.type);
+      const subscriptions: Array<() => void> = [];
+      const cardEnv: CardEnv = {
+        ...env,
+        on(event, handler) {
+          const handlers = listeners.get(event) ?? new Set();
+          listeners.set(event, handlers);
+          handlers.add(handler);
+          subscriptions.push(() => handlers.delete(handler));
+        },
+      };
       let card: Card;
       try {
         card = type
-          ? type.factory(cfg, env)
+          ? type.factory(cfg, cardEnv)
           : noteCard("Unknown card", (theme, width) => [
               theme.fg("warning", truncateToWidth(`No card type "${cfg.type}".`, width, "…")),
               theme.fg("dim", truncateToWidth(`Available: ${[...cardTypes.keys()].join(", ")}`, width, "…")),
@@ -300,7 +363,7 @@ export default async function (pi: ExtensionAPI) {
         const message = e instanceof Error ? e.message : String(e);
         card = noteCard(cfg.type, (theme, width) => [theme.fg("error", truncateToWidth(`card error: ${message}`, width, "…"))]);
       }
-      return { cfg, card, collapsed: cfg.collapsed === true };
+      return { cfg, card, collapsed: cfg.collapsed === true, dispose: () => subscriptions.forEach((off) => off()) };
     }
 
     // A card is someone else's code: when it throws, show that instead of breaking the whole pane.
@@ -313,7 +376,8 @@ export default async function (pi: ExtensionAPI) {
     }
 
     // The header is always the first row. Open: a box. Collapsed: that one row, closed with ├ ┤.
-    function frame(card: Card, isCollapsed: boolean, width: number, theme: Theme): string[] {
+    // `bodyRows`, for a card with "fill", is the exact number of body rows it is given.
+    function frame(card: Card, isCollapsed: boolean, width: number, theme: Theme, bodyRows?: number): string[] {
       const border = (s: string) => theme.fg("border", s);
       const inner = Math.max(1, width - 4);
 
@@ -331,7 +395,11 @@ export default async function (pi: ExtensionAPI) {
       const out: string[] = [border(left + "─") + label + border(fill) + " " + caret + " " + border("─" + right)];
       if (isCollapsed) return out;
 
-      const body = guard(() => card.render(inner, theme), [theme.fg("error", "card error: it could not be drawn")]);
+      let body = guard(() => card.render(inner, theme, bodyRows), [theme.fg("error", "card error: it could not be drawn")]);
+      if (bodyRows !== undefined) {
+        body = body.slice(0, bodyRows);
+        while (body.length < bodyRows) body.push("");
+      }
       for (const line of body) {
         out.push(border("│") + " " + truncateToWidth(line, inner, "…", true) + " " + border("│"));
       }
@@ -347,10 +415,28 @@ export default async function (pi: ExtensionAPI) {
       const blank = " ".repeat(width); // every row is solid, so nothing shows through
       const lines: string[] = [];
       const headers: { row: number; card: number }[] = []; // in content rows
-      drawn().forEach((i, position) => {
+
+      // Every drawn card at its natural size first.
+      const order = drawn();
+      const frames = order.map((i) => frame(entries[i].card, entries[i].collapsed, width, theme));
+
+      // Rows left over go, evenly, to the open cards with "fill" (the first ones get the odd rows).
+      // A collapsed card is one row and never grows. With no free rows, nothing changes.
+      const used = frames.reduce((n, f) => n + f.length, 0) + Math.max(0, order.length - 1);
+      const fillers = order.flatMap((i, k) => (entries[i].cfg.fill === true && !entries[i].collapsed ? [k] : []));
+      const free = room - used;
+      if (free > 0 && fillers.length > 0) {
+        fillers.forEach((k, n) => {
+          const extra = Math.floor(free / fillers.length) + (n < free % fillers.length ? 1 : 0);
+          const i = order[k];
+          frames[k] = frame(entries[i].card, false, width, theme, frames[k].length - 2 + extra);
+        });
+      }
+
+      order.forEach((i, position) => {
         if (position > 0) lines.push(blank);
         headers.push({ row: lines.length, card: i });
-        lines.push(...frame(entries[i].card, entries[i].collapsed, width, theme));
+        lines.push(...frames[position]);
       });
 
       contentRows = lines.length;
@@ -567,6 +653,8 @@ export default async function (pi: ExtensionAPI) {
     }
 
     teardown = () => {
+      if (repaintTimer) clearTimeout(repaintTimer);
+      repaintTimer = undefined;
       unmountOverlay();
       restoreRoot();
       try {
@@ -600,6 +688,7 @@ export default async function (pi: ExtensionAPI) {
       // The configured cards in order, then the card types nobody uses yet, switched off.
       const savedEntries = [...entries];
       const savedEnabled = savedEntries.map((e) => e.cfg.enabled);
+      const savedFill = savedEntries.map((e) => e.cfg.fill);
       const byConfig = new Map<CardConfig, Entry>(entries.map((e) => [e.cfg, e]));
       const rows = entries.map((e) => describe(e.cfg));
       for (const name of cardTypes.keys()) {
@@ -629,10 +718,13 @@ export default async function (pi: ExtensionAPI) {
 
       if (!save) {
         // Undo the preview: the cards and their switches as they were.
+        for (const entry of byConfig.values()) if (!savedEntries.includes(entry)) entry.dispose();
         entries = savedEntries;
         savedEntries.forEach((e, i) => {
           if (savedEnabled[i] === undefined) delete e.cfg.enabled;
           else e.cfg.enabled = savedEnabled[i];
+          if (savedFill[i] === undefined) delete e.cfg.fill;
+          else e.cfg.fill = savedFill[i];
         });
         requestRender?.();
         return;
@@ -654,6 +746,7 @@ export default async function (pi: ExtensionAPI) {
     };
 
     function start() {
+      entries.forEach((e) => e.dispose());
       entries = config.cards.map(buildEntry);
       if (tuiRef) layout(); // otherwise the widget factory picks the container as soon as it has the TUI
       void refreshAll?.();

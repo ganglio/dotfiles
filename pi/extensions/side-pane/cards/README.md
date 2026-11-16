@@ -56,6 +56,25 @@ const card: CardFactory = (config, env) => {
 export default card;
 ```
 
+## Filling the pane
+
+Any card entry can have `"fill": true` in `side-pane.json` (or press `f` on it in `/pane config`).
+The pane draws every card at its natural size first. If rows are left over, the open cards with
+`fill` share them evenly (the first ones get the odd row). A collapsed card never grows.
+
+A card does not have to do anything for this: its box is padded to the new size. A card that can show
+more when it has room can use the optional third argument of `render`:
+
+```ts
+render(width, theme, height) {
+  // `height` is only set for a card with "fill": the rows its body may use.
+  const limit = height ?? maxLines;   // use them if you can; the pane pads or cuts to `height`
+  ...
+}
+```
+
+`working tree`, `agent edits` and `thinking` do this.
+
 ## What a card gets
 
 - `config`: its entry from `side-pane.json` (`type`, `title`, `collapsed`, `enabled` and whatever
@@ -64,6 +83,16 @@ export default card;
   `undefined` when git failed (not a repository, no commits, timed out).
 - `env.cwd`: pi's working directory.
 - `env.touched`: the files the agent wrote or edited this session (absolute path to count and time).
+- `env.on(event, handler)`: subscribes to a pi event for as long as the card lives. You get the
+  same event object an extension would get from `pi.on`. Available events: `before_agent_start`
+  (once per user prompt), `agent_start`, `agent_end`, `turn_start`, `turn_end`, `message_start`,
+  `message_update` (every streamed token), `message_end`, `tool_execution_start`,
+  `tool_execution_end`, `tool_call`, `tool_result`. A handler that throws is ignored, and the
+  subscriptions go away with the card.
+- `env.repaint()`: asks the pane to redraw after state changed outside `refresh()`. It is coalesced
+  to about 15 redraws a second, so calling it on every token is fine.
+- `env.sessionEntries()`: the current session branch, oldest first. Use it to rebuild state after
+  `/reload` or a resume, as `thinking.ts` does.
 - `render(width, theme)`: `theme.fg("accent" | "muted" | "dim" | "success" | "warning" | "error", text)`.
   Use `truncateToWidth` / `visibleWidth` / `wrapTextWithAnsi` from `@earendil-works/pi-tui`: never
   rely on `string.length` for what lands on screen.
