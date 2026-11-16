@@ -2,9 +2,11 @@
 # Links the AI agents configuration from the dotfiles into the places the
 # agents read from. Safe to re-run: run it again after adding or removing a skill.
 #
-#   pi/models.json, pi/settings.json, pi/pi-jefferson.json -> ~/.pi/agent/
+#   pi/models.json, pi/settings.json, pi/pi-jefferson.json, pi/side-pane.json -> ~/.pi/agent/
 #   pi/extensions/<file>             -> ~/.pi/agent/extensions/<file>  (one by one: other
 #                                       tools put their own files in that folder)
+#   pi/extensions/<dir>/ (with an index.ts) -> ~/.pi/agent/extensions/<dir>  (the whole folder
+#                                       is linked, so a file added inside it needs no relinking)
 #   agents/skills/<name>/            -> ~/.agents/skills/<name>  (pi, other agents)
 #                                    -> ~/.claude/skills/<name>  (Claude Code)
 #
@@ -27,7 +29,7 @@ link() {
 }
 
 echo "Linking pi configuration"
-for f in models.json settings.json pi-jefferson.json; do
+for f in models.json settings.json pi-jefferson.json side-pane.json; do
 	link "$dotfiles/pi/$f" "$HOME/.pi/agent/$f"
 done
 
@@ -36,6 +38,11 @@ shopt -s nullglob
 echo "Linking pi extensions"
 for f in "$dotfiles"/pi/extensions/*.ts "$dotfiles"/pi/extensions/*.js; do
 	link "$f" "$HOME/.pi/agent/extensions/$(basename "$f")"
+done
+for d in "$dotfiles"/pi/extensions/*/; do
+	d="${d%/}"
+	[ -f "$d/index.ts" ] || [ -f "$d/index.js" ] || continue
+	link "$d" "$HOME/.pi/agent/extensions/$(basename "$d")"
 done
 # Drop links to extensions that were removed from the dotfiles
 for l in "$HOME"/.pi/agent/extensions/*; do

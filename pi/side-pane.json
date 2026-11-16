@@ -1,0 +1,33 @@
+{
+  "enabled": true,
+  "layout": "auto",
+  "width": "30%",
+  "minWidth": 34,
+  "maxHeight": "75%",
+  "minTerminalWidth": 110,
+  "refreshSeconds": 10,
+  "cards": [
+    {
+      "type": "git-log",
+      "title": "Recent commits",
+      "count": 3,
+      "messageLines": 2,
+      "date": "relative"
+    },
+    {
+      "type": "git-status",
+      "title": "Working tree",
+      "maxFiles": 6
+    },
+    {
+      "type": "agent-files",
+      "title": "Agent edits",
+      "maxFiles": 6
+    },
+    {
+      "type": "ollama",
+      "title": "Ollama",
+      "collapsed": true
+    }
+  ]
+}
