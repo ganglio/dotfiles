@@ -5,6 +5,7 @@
     "ollama/**",
     "remote/**"
   ],
+  "hideThinkingBlock": true,
   "enableAnalytics": false,
   "enableInstallTelemetry": false,
   "lastChangelogVersion": "1.5.2",

@@ -8,6 +8,12 @@
   "refreshSeconds": 10,
   "cards": [
     {
+      "type": "thinking",
+      "title": "Thinking",
+      "maxLines": 10,
+      "fill": true
+    },
+    {
       "type": "git-log",
       "title": "Recent commits",
       "count": 3,
@@ -17,17 +23,20 @@
     {
       "type": "git-status",
       "title": "Working tree",
-      "maxFiles": 6
+      "maxFiles": 6,
+      "enabled": false
     },
     {
       "type": "agent-files",
       "title": "Agent edits",
-      "maxFiles": 6
+      "maxFiles": 6,
+      "enabled": false
     },
     {
       "type": "ollama",
       "title": "Ollama",
-      "collapsed": true
+      "collapsed": true,
+      "enabled": false
     }
   ]
 }
