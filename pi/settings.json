@@ -2,8 +2,8 @@
   "defaultProvider": "ollama",
   "defaultModel": "gemma4:31b",
   "enabledModels": [
-    "ollama/*",
-    "remote/*"
+    "ollama/**",
+    "remote/**"
   ],
   "enableAnalytics": false,
   "enableInstallTelemetry": false,
