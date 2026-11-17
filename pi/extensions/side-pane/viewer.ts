@@ -8,7 +8,7 @@
 //   │          ...    │ - const x = 1;
 //   │                 │ + const x = 2;
 //   │                 └ [ Keep original ] [ Use edit ]
-//   └ bar      1 comment · 1 to send            [ Send 1 ] [ ▲ Chat ] [ ✕ Close ]
+//   └ bar      1 comment · 1 to send            [ Send 1 ] [ ✕ Close ]
 //
 // Layout and wiring live in index.ts; the model (ranges, the prompt, applying edits) in review.ts.
 
@@ -35,8 +35,6 @@ class ContainedScrollView extends ScrollView {
 export interface ViewerHost {
   theme(): Theme;
   requestRender(): void;
-  chatLarge(): boolean;
-  toggleChat(): void;
   close(): void;
   notify(message: string, level: "info" | "warning" | "error"): void;
   // A dialog asking for a comment; resolves to the text, or undefined when cancelled.
@@ -61,7 +59,7 @@ interface Cell {
 
 // A row of the content: a source line, or a part of a proposal block shown under a line.
 type Row =
-  | { kind: "line"; line: number }
+  | { kind: "line"; line: number; from: number; to: number; first: boolean } // cells [from, to) of the line
   | { kind: "proposal"; id: number; part: "top" | "orig" | "new" | "note" | "buttons"; text: string };
 
 const INVERSE = ["\x1b[7m", "\x1b[27m"];
@@ -295,27 +293,48 @@ export function createViewer(host: ViewerHost, cwd: string) {
     return t.fg("accent", "●");
   }
 
-  // One source line: the gutter, then the text, with the selection reversed and commented text underlined.
-  function lineRow(i: number, width: number): string {
+  // Where a long line breaks: the cell ranges [from, to) that fit `textW` columns, one per row. A
+  // break goes after the last space of the row when that does not waste much of it, else it is hard.
+  function wrapCells(i: number, textW: number): [number, number][] {
+    const cs = cellsOf(i);
+    const out: [number, number][] = [];
+    let from = 0;
+    while (from < cs.length) {
+      let acc = 0;
+      let to = from;
+      while (to < cs.length && (to === from || acc + cs[to].w <= textW)) acc += cs[to++].w;
+      if (to < cs.length) {
+        for (let k = to; k > from + Math.floor((to - from) / 2); k--) {
+          if (cs[k - 1].text === " ") {
+            to = k;
+            break;
+          }
+        }
+      }
+      out.push([from, to]);
+      from = to;
+    }
+    return out.length ? out : [[0, 0]];
+  }
+
+  // One row of a source line: the gutter (numbered on the first row of a wrapped line), then the
+  // text, with the selection reversed and commented text underlined.
+  function lineRow(row: Extract<Row, { kind: "line" }>, width: number): string {
     const t = theme();
+    const i = row.line;
     const numW = String(Math.max(1, lines.length)).length;
-    const gutter = t.fg("dim", String(i + 1).padStart(numW)) + " " + markerFor(i) + t.fg("border", "│") + " ";
+    const gutter = row.first
+      ? t.fg("dim", String(i + 1).padStart(numW)) + " " + markerFor(i) + t.fg("border", "│") + " "
+      : " ".repeat(numW + 2) + t.fg("border", "│") + " ";
     const textW = Math.max(1, width - (numW + 4));
     const cs = cellsOf(i);
     const ls = starts[i];
     const sel = selection();
     const spans = comments.filter((c) => c.end > ls && c.start < ls + (lines[i]?.length ?? 0) + 1 && !c.stale && c.proposal?.state !== "applied");
 
-    const total = cs.reduce((n, c) => n + c.w, 0);
-    const limit = total <= textW ? textW : textW - 1;
     let out = "";
     let acc = 0;
-    let cut = false;
-    for (const cell of cs) {
-      if (acc + cell.w > limit) {
-        cut = true;
-        break;
-      }
+    for (const cell of cs.slice(row.from, row.to)) {
       const off = ls + cell.idx;
       let s = cell.text;
       if (spans.some((c) => off >= c.start && off < c.end)) s = UNDERLINE[0] + s + UNDERLINE[1];
@@ -323,23 +342,51 @@ export function createViewer(host: ViewerHost, cwd: string) {
       out += s;
       acc += cell.w;
     }
-    // A selection that runs over the end of the line shows as a reversed space.
+    // A selection that runs over the end of the line shows as a reversed space, after its last row.
     const lineEnd = ls + (lines[i]?.length ?? 0);
-    if (!cut && sel && lineEnd >= sel.start && lineEnd < sel.end && acc < textW) out += INVERSE[0] + " " + INVERSE[1];
-    if (cut) out += "…";
+    if (row.to >= cs.length && sel && lineEnd >= sel.start && lineEnd < sel.end && acc < textW) out += INVERSE[0] + " " + INVERSE[1];
     return gutter + out;
   }
 
-  // The block that shows a pending proposal under the last line of its comment.
-  function proposalRows(c: Comment): Row[] {
+  // Breaks plain text into pieces of at most `w` columns (tabs become spaces): after the last space
+  // of a piece when that does not waste much of it, else in the middle of a word.
+  function wrapPlain(text: string, w: number): string[] {
+    const chars = Array.from(text.replace(/\t/g, " ".repeat(TAB)));
+    const widths = chars.map((ch) => visibleWidth(ch));
+    const out: string[] = [];
+    let from = 0;
+    while (from < chars.length) {
+      let acc = 0;
+      let to = from;
+      while (to < chars.length && (to === from || acc + widths[to] <= w)) acc += widths[to++];
+      if (to < chars.length) {
+        for (let k = to; k > from + Math.floor((to - from) / 2); k--) {
+          if (chars[k - 1] === " ") {
+            to = k;
+            break;
+          }
+        }
+      }
+      out.push(chars.slice(from, to).join(""));
+      from = to;
+    }
+    return out.length ? out : [""];
+  }
+
+  // The block that shows a pending proposal under the last line of its comment, wrapped to `room`
+  // columns. A text row carries its final text: the "- " / "+ " mark on its first row, blanks after.
+  function proposalRows(c: Comment, room: number): Row[] {
     const p = c.proposal!;
     const out: Row[] = [];
-    const top = ` proposal for comment ${c.id}${p.note ? ` · ${p.note}` : ""} `;
-    out.push({ kind: "proposal", id: c.id, part: "top", text: top });
+    out.push({ kind: "proposal", id: c.id, part: "top", text: ` proposal for comment ${c.id} ` });
+    if (p.note) for (const piece of wrapPlain(p.note, room)) out.push({ kind: "proposal", id: c.id, part: "note", text: piece });
     const side = (src: string, kind: "orig" | "new") => {
+      const mark = kind === "orig" ? "- " : "+ ";
       const ls = src.split("\n");
-      ls.slice(0, MAX_PROPOSAL_ROWS).forEach((l) => out.push({ kind: "proposal", id: c.id, part: kind, text: l }));
-      if (ls.length > MAX_PROPOSAL_ROWS) out.push({ kind: "proposal", id: c.id, part: kind, text: `… ${ls.length - MAX_PROPOSAL_ROWS} more lines` });
+      const add = (l: string) =>
+        wrapPlain(l, Math.max(1, room - 2)).forEach((piece, n) => out.push({ kind: "proposal", id: c.id, part: kind, text: (n === 0 ? mark : "  ") + piece }));
+      ls.slice(0, MAX_PROPOSAL_ROWS).forEach(add);
+      if (ls.length > MAX_PROPOSAL_ROWS) out.push({ kind: "proposal", id: c.id, part: kind, text: `  … ${ls.length - MAX_PROPOSAL_ROWS} more lines` });
     };
     side(c.text, "orig");
     side(p.replacement, "new");
@@ -358,9 +405,9 @@ export function createViewer(host: ViewerHost, cwd: string) {
       case "top":
         return indent + t.fg("accent", "┌" + row.text + "─".repeat(Math.max(0, room - visibleWidth(row.text) + 1)));
       case "orig":
-        return indent + t.fg("accent", "│ ") + t.fg("error", truncateToWidth("- " + row.text.replace(/\t/g, "    "), room, "…"));
+        return indent + t.fg("accent", "│ ") + t.fg("error", truncateToWidth(row.text, room, "…"));
       case "new":
-        return indent + t.fg("accent", "│ ") + t.fg("success", truncateToWidth("+ " + row.text.replace(/\t/g, "    "), room, "…"));
+        return indent + t.fg("accent", "│ ") + t.fg("success", truncateToWidth(row.text, room, "…"));
       case "note":
         return indent + t.fg("accent", "│ ") + t.fg("dim", truncateToWidth(row.text, room, "…"));
       case "buttons": {
@@ -394,11 +441,12 @@ export function createViewer(host: ViewerHost, cwd: string) {
         const line = posOf(starts, Math.max(c.start, c.end - 1)).line;
         blocks.set(line, [...(blocks.get(line) ?? []), c]);
       }
+      const textW = Math.max(1, width - gutterWidth());
       for (let i = 0; i < lines.length; i++) {
-        rows.push({ kind: "line", line: i });
-        for (const c of blocks.get(i) ?? []) rows.push(...proposalRows(c));
+        wrapCells(i, textW).forEach(([from, to], n) => rows.push({ kind: "line", line: i, from, to, first: n === 0 }));
+        for (const c of blocks.get(i) ?? []) rows.push(...proposalRows(c, Math.max(1, width - gutterWidth() - 2)));
       }
-      return rows.map((row, idx) => (row.kind === "line" ? lineRow(row.line, width) : proposalText(row, idx, width)));
+      return rows.map((row, idx) => (row.kind === "line" ? lineRow(row, width) : proposalText(row, idx, width)));
     },
 
     handleMouse(event: { type: string; button: string; x: number; y: number }) {
@@ -416,23 +464,26 @@ export function createViewer(host: ViewerHost, cwd: string) {
         return { handled: true, render: true };
       }
 
-      // The character under the pointer: offsets into the text. In the gutter that is the start of the line.
+      // The character under the pointer: offsets into the text. In the gutter that is the start of the row.
       const offsetAt = (): number => {
         const cs = cellsOf(row.line);
+        const lineEnd = starts[row.line] + (lines[row.line]?.length ?? 0);
+        const rowStart = row.from < cs.length ? starts[row.line] + cs[row.from].idx : lineEnd;
         const col = event.x - x0;
-        if (col < 0) return starts[row.line];
+        if (col < 0) return rowStart;
         let acc = 0;
-        for (const cell of cs) {
+        for (const cell of cs.slice(row.from, row.to)) {
           if (col < acc + cell.w) return starts[row.line] + cell.idx;
           acc += cell.w;
         }
-        return starts[row.line] + (lines[row.line]?.length ?? 0);
+        // Past the end of the row: its end, which on a wrapped row is where the next one starts.
+        return row.to < cs.length ? starts[row.line] + cs[row.to].idx : lineEnd;
       };
 
       if (event.button !== "left") return undefined;
       if (event.type === "press") {
         // A press on the comment marker is a click on it, not the start of a selection.
-        if (event.x >= x0 - 3 && event.x < x0 - 2 && markerFor(row.line) !== " ") return undefined;
+        if (row.first && event.x >= x0 - 3 && event.x < x0 - 2 && markerFor(row.line) !== " ") return undefined;
         anchor = head = offsetAt();
         return { handled: true, capture: true, render: true };
       }
@@ -446,7 +497,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
         else anchor = head = undefined;
         return { handled: true, render: true };
       }
-      if (event.type === "click" && event.x >= x0 - 3 && event.x < x0 - 2) {
+      if (event.type === "click" && row.first && event.x >= x0 - 3 && event.x < x0 - 2) {
         const c = commentsOnLine(row.line)[0];
         if (c) {
           void commentMenu(c.id);
@@ -478,7 +529,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
     invalidate() {},
   };
 
-  let barHits: { send?: [number, number]; chat?: [number, number]; close?: [number, number]; status?: [number, number] } = {};
+  let barHits: { send?: [number, number]; close?: [number, number]; status?: [number, number] } = {};
   const bar: Component = {
     render(width: number): string[] {
       const t = theme();
@@ -493,9 +544,8 @@ export function createViewer(host: ViewerHost, cwd: string) {
         if (toReview > 0) parts.push(`${toReview} proposal${toReview === 1 ? "" : "s"} to review (click here)`);
       }
       const status = " " + parts.join(" · ");
-      const buttons: { key: "send" | "chat" | "close"; label: string; style: (s: string) => string }[] = [];
+      const buttons: { key: "send" | "close"; label: string; style: (s: string) => string }[] = [];
       if (toSend > 0) buttons.push({ key: "send", label: `[ Send ${toSend} ]`, style: (s) => t.bold(t.fg("accent", s)) });
-      buttons.push({ key: "chat", label: host.chatLarge() ? "[ ▼ Chat ]" : "[ ▲ Chat ]", style: (s) => t.fg("muted", s) });
       buttons.push({ key: "close", label: "[ ✕ Close ]", style: (s) => t.fg("muted", s) });
       const rightW = buttons.reduce((n, b) => n + visibleWidth(b.label) + 1, 0);
       // The bar is the bottom edge of the viewer's box: a rule leads into the status, and the space
@@ -521,7 +571,6 @@ export function createViewer(host: ViewerHost, cwd: string) {
       if (event.type !== "click" || event.button !== "left") return undefined;
       const within = (r?: [number, number]) => !!r && event.x >= r[0] && event.x <= r[1];
       if (within(barHits.send)) sendReview();
-      else if (within(barHits.chat)) host.toggleChat();
       else if (within(barHits.close)) host.close();
       else if (within(barHits.status)) jumpToProposal();
       else return undefined;
