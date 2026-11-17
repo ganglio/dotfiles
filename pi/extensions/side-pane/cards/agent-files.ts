@@ -28,8 +28,8 @@ const card: CardFactory = (config, env) => {
     render(width, theme, height) {
       const rows = newestFirst();
       if (rows.length === 0) return [theme.fg("dim", "No edits yet.")];
-      // With "fill" the pane says how many rows there are: show as many files as fit.
-      const limit = height === undefined ? maxFiles : rows.length <= height ? rows.length : Math.max(1, height - 1);
+      // With a height from the pane (fill, or a resized card) every file is returned: the pane scrolls.
+      const limit = height === undefined ? maxFiles : rows.length;
       const lines = rows.slice(0, limit).map(([path, { count, at }]) => {
         const right = [count > 1 ? `×${count}` : "", age(at)].filter(Boolean).join(" ");
         const room = Math.max(4, width - (right ? visibleWidth(right) + 1 : 0));

@@ -79,6 +79,19 @@ render(width, theme, height) {
 
 `working tree`, `agent edits` and `thinking` do this.
 
+## Resizing and scrolling
+
+Any card entry can have `"resizable": true` (or press `r` on it in `/pane config`): its top and
+bottom edges can then be dragged with the mouse. Dragging a plain card sets its height. Dragging an
+edge of a `fill` card moves the border between it and the nearest `fill` card on that side, so one
+grows and the other shrinks. A click on a header, without moving, still collapses the card. The
+sizes are saved as `"height"` in `side-pane.json` (for `fill` cards they are shares of the free rows).
+
+A card that is given a height (by `fill` or by resizing) can simply return all its lines from
+`render`: when the body is taller than its rows the pane scrolls it with the wheel and draws a
+scrollbar in the card's right border. A card with `follow: true` (the thinking card) stays at the
+end while content streams in, until the user scrolls up.
+
 ## Mouse input
 
 A card can implement `handleMouse(event)` to react to the mouse over its body. `x` and `y` are local

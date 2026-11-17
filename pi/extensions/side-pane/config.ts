@@ -12,6 +12,8 @@ export interface PaneConfig {
   minWidth: number;
   maxHeight: number | `${number}%`;
   minTerminalWidth: number;
+  // How tall the file viewer is while a file is open: rows, or a percentage of the window. Unset: the chat gets 11 rows.
+  viewerHeight?: number | `${number}%`;
   hideFooter: boolean;
   refreshSeconds: number;
   shortcut?: string;
@@ -59,6 +61,7 @@ export function loadConfig(): { config: PaneConfig; error?: string } {
     }
     if (parsed.hideFooter !== undefined) typeof parsed.hideFooter === "boolean" ? (config.hideFooter = parsed.hideFooter) : problems.push('"hideFooter" must be true or false');
     if (parsed.width !== undefined) isSize(parsed.width) ? (config.width = parsed.width) : problems.push('"width" must be a number or a percentage like "30%"');
+    if (parsed.viewerHeight !== undefined) isSize(parsed.viewerHeight) ? (config.viewerHeight = parsed.viewerHeight) : problems.push('"viewerHeight" must be a number or a percentage like "60%"');
     if (parsed.maxHeight !== undefined) isSize(parsed.maxHeight) ? (config.maxHeight = parsed.maxHeight) : problems.push('"maxHeight" must be a number or a percentage like "75%"');
     for (const key of ["minWidth", "minTerminalWidth"] as const) {
       const v = parsed[key];
@@ -88,6 +91,31 @@ export function loadConfig(): { config: PaneConfig; error?: string } {
 // Returns an error message, or undefined on success. A file that is not valid JSON is never
 // overwritten. The file may be a symlink into the dotfiles: writing goes through it.
 export function saveCards(cards: CardConfig[]): string | undefined {
+  return update((current) => {
+    // "enabled": true, "fill": false and "resizable": false are the defaults: leave them out so the file stays tidy.
+    current.cards = cards.map((c) => {
+      const { enabled, fill, resizable, ...rest } = c;
+      return {
+        ...rest,
+        ...(fill === true ? { fill: true } : {}),
+        ...(resizable === true ? { resizable: true } : {}),
+        ...(enabled === false ? { enabled: false } : {}),
+      };
+    });
+  });
+}
+
+// Writes the pane's width and the file viewer's height (what the user set by dragging), leaving
+// every other key as it was. Same rules as saveCards.
+export function saveLayout(layout: { width?: string; viewerHeight?: string }): string | undefined {
+  return update((current) => {
+    if (layout.width !== undefined) current.width = layout.width;
+    if (layout.viewerHeight !== undefined) current.viewerHeight = layout.viewerHeight;
+  });
+}
+
+// Reads side-pane.json, lets `change` edit it and writes it back.
+function update(change: (current: Record<string, unknown>) => void): string | undefined {
   const path = configPath();
   let current: Record<string, unknown> = {};
   if (existsSync(path)) {
@@ -99,11 +127,7 @@ export function saveCards(cards: CardConfig[]): string | undefined {
       return `Not saved: side-pane.json is not valid JSON (${e instanceof Error ? e.message : String(e)}). Fix it by hand first.`;
     }
   }
-  // "enabled": true and "fill": false are the defaults: leave them out so the file stays tidy.
-  current.cards = cards.map((c) => {
-    const { enabled, fill, ...rest } = c;
-    return { ...rest, ...(fill === true ? { fill: true } : {}), ...(enabled === false ? { enabled: false } : {}) };
-  });
+  change(current);
   try {
     writeFileSync(path, JSON.stringify(current, null, 2) + "\n");
     return undefined;

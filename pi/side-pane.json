@@ -1,7 +1,7 @@
 {
   "enabled": true,
   "layout": "auto",
-  "width": "30%",
+  "width": "37.39%",
   "minWidth": 34,
   "maxHeight": "75%",
   "minTerminalWidth": 110,
@@ -11,7 +11,9 @@
       "type": "thinking",
       "title": "Thinking",
       "maxLines": 10,
-      "fill": true
+      "height": 33,
+      "fill": true,
+      "resizable": true
     },
     {
       "type": "session",
@@ -20,7 +22,9 @@
     {
       "type": "files",
       "title": "Files",
-      "fill": true
+      "height": 14,
+      "fill": true,
+      "resizable": true
     },
     {
       "type": "git-log",
@@ -48,5 +52,6 @@
       "collapsed": true,
       "enabled": false
     }
-  ]
+  ],
+  "viewerHeight": "68.97%"
 }

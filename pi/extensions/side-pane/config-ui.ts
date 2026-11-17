@@ -8,7 +8,7 @@
 //   │ Hash, date, author and an excerpt of ...    │
 //   │ needs: a git repository                     │
 //   │                                             │
-//   │ ↑↓ select · space on/off · f fill on/off    │
+//   │ ↑↓ select · space on/off · f fill · r resizable │
 //   │ shift+↑↓ move · enter save · esc cancel     │
 //   ╰─────────────────────────────────────────────╯
 //
@@ -56,6 +56,10 @@ export function createCardsEditor(o: Options): Component {
     rows[i].cfg.fill = rows[i].cfg.fill !== true;
     changed();
   };
+  const toggleResizable = (i: number) => {
+    rows[i].cfg.resizable = rows[i].cfg.resizable !== true;
+    changed();
+  };
   const move = (i: number, delta: number) => {
     const j = i + delta;
     if (j < 0 || j >= rows.length) return;
@@ -85,7 +89,8 @@ export function createCardsEditor(o: Options): Component {
         const name = row.known ? row.title : `${row.type} (unknown)`;
         const styledName = i === selected ? theme.bold(on ? name : theme.fg("dim", name)) : on ? name : theme.fg("dim", name);
         const fillMark = row.cfg.fill === true ? ` ${theme.fg("accent", "⇕")}` : ""; // grows to fill the pane
-        const left = `${i === selected ? theme.fg("accent", "›") : " "} ${box} ${styledName}${fillMark}`;
+        const resizeMark = row.cfg.resizable === true ? ` ${theme.fg("accent", "↕")}` : ""; // its edges can be dragged
+        const left = `${i === selected ? theme.fg("accent", "›") : " "} ${box} ${styledName}${fillMark}${resizeMark}`;
         const typeText = truncateToWidth(row.type, Math.max(0, inner - visibleWidth(left) - 1 - 5), "…");
         const right = theme.fg("dim", typeText) + "  " + theme.fg("accent", "▲") + " " + theme.fg("accent", "▼");
         line(left + " ".repeat(Math.max(1, inner - visibleWidth(left) - visibleWidth(right))) + right);
@@ -102,7 +107,7 @@ export function createCardsEditor(o: Options): Component {
         if (row.needs) line(theme.fg("dim", `needs: ${row.needs}`));
       }
       line("");
-      line(theme.fg("dim", "↑↓ select · space on/off · f fill on/off"));
+      line(theme.fg("dim", "↑↓ select · space on/off · f fill · r resizable"));
       line(theme.fg("dim", "shift+↑↓ move · enter save · esc cancel"));
       out.push(border("╰" + "─".repeat(Math.max(0, width - 2)) + "╯"));
       return out;
@@ -115,6 +120,7 @@ export function createCardsEditor(o: Options): Component {
       else if (matchesKey(data, Key.down)) selected = Math.min(rows.length - 1, selected + 1);
       else if (matchesKey(data, Key.space)) return toggle(selected);
       else if (data === "f" || data === "F") return toggleFill(selected);
+      else if (data === "r" || data === "R") return toggleResizable(selected);
       else if (matchesKey(data, Key.shift("up")) || matchesKey(data, Key.alt("up"))) return move(selected, -1);
       else if (matchesKey(data, Key.shift("down")) || matchesKey(data, Key.alt("down"))) return move(selected, 1);
       else return;

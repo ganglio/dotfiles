@@ -139,17 +139,18 @@ const card: CardFactory = (config, env) => {
     title: typeof config.title === "string" ? config.title : "Thinking",
     needs: "a model that produces thinking",
     available: () => seen,
+    follow: true, // a card that is taller than its rows stays at the newest thinking
 
     async refresh() {},
 
     render(width, theme, height) {
-      // With "fill" the pane says how many rows there are: show that many instead of maxLines.
-      const limit = Math.max(3, height ?? maxLines);
       const all = rows(width);
       if (all.length === 0) return [theme.fg("dim", streaming ? "thinking…" : "No thinking yet.")];
 
-      // The newest rows, with a note for what is cut off at the top.
-      const hidden = Math.max(0, all.length - limit);
+      // With a height from the pane (fill, or a resized card) every row is returned: the pane
+      // scrolls, following the newest. Without one: the newest maxLines rows, and a note for the rest.
+      const limit = Math.max(3, maxLines);
+      const hidden = height === undefined ? Math.max(0, all.length - limit) : 0;
       const shown = hidden > 0 ? all.slice(-(limit - 1)) : all;
       const lines = shown.map((line) => theme.fg("muted", line));
       if (hidden > 0) lines.unshift(theme.fg("dim", `… ${hidden + 1} earlier lines`));

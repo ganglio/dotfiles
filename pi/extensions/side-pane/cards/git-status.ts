@@ -112,8 +112,8 @@ const card: CardFactory = (config, env) => {
       ];
       if (rows.length === 0) return [theme.fg("success", "Working tree clean")];
 
-      // With "fill" the pane says how many rows there are: show as many files as fit.
-      const limit = height === undefined ? maxFiles : rows.length <= height ? rows.length : Math.max(1, height - 1);
+      // With a height from the pane (fill, or a resized card) every file is returned: the pane scrolls.
+      const limit = height === undefined ? maxFiles : rows.length;
       const lines = rows.slice(0, limit).map(({ marker, color, file }) => {
         const hasStat = file.add !== undefined && file.del !== undefined;
         const statPlain = hasStat ? `+${file.add} −${file.del}` : "";

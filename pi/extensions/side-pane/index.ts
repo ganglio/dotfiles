@@ -32,10 +32,15 @@
 // top-right: it is drawn over the chat and does NOT shrink it (text under it is hidden).
 //
 // The pane hides itself on narrow terminals (minTerminalWidth), and `/pane` toggles it by hand.
+// A card with "resizable": true can be resized by dragging its top or bottom edge, and a card whose
+// body is taller than its rows scrolls (wheel, scrollbar); see cards/README.md.
+// Drag the pane's left edge (the blank column or the cards' left border) to make it wider or
+// narrower; the chat keeps at least MIN_CHAT_COLUMNS. The width is saved to side-pane.json, and so
+// is the viewer's height ("viewerHeight"), so the next run opens with the same sizes.
 //
 // File viewer. The Files card (cards/files.ts) lists the working directory; clicking a file, or
-// /file <path>, splits the main area: the file above (viewer.ts), the chat below with a button to
-// make it larger. Drag over text to select it and comment on it; "Send" hands the selections, the
+// /file <path>, splits the main area: the file above (viewer.ts), the chat below; drag the chat's
+// top edge to give either more room. Drag over text to select it and comment on it; "Send" hands the selections, the
 // comments and the file's path to the agent, which answers each comment with the propose_edit
 // tool below instead of editing. The proposals show inline, and "Use edit" is the only thing that
 // writes the file. Needs the dock, so pi's fullscreen mode. /file close and /file send are the
@@ -65,6 +70,8 @@
 //                                   "dock" = the same, but warn when it falls back;
 //                                   "overlay" = always an overlay
 //     "width": "30%",               columns, or a percentage of the terminal width
+//     "viewerHeight": "60%",        how tall the file viewer is (rows, or a percentage of the window);
+//                                   dragging the chat's top edge sets it. Unset: the chat gets 11 rows
 //     "minWidth": 34,               never narrower than this many columns
 //     "maxHeight": "75%",           rows, or a percentage of the terminal height (overlay only;
 //                                   the dock uses the whole height of the window)
@@ -91,7 +98,7 @@ import { HStack, isViewportTUI, truncateToWidth, visibleWidth } from "@earendil-
 import { Type } from "typebox";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig, saveCards } from "./config";
+import { loadConfig, saveCards, saveLayout } from "./config";
 import { createCardsEditor } from "./config-ui";
 import type { EditorRow } from "./config-ui";
 import { discoverCards } from "./registry";
@@ -303,10 +310,15 @@ export default async function (pi: ExtensionAPI) {
       card: Card;
       collapsed: boolean;
       dispose: () => void; // drops the card's event subscriptions
+      // A body taller than its rows scrolls: the first row in view, whether it follows the end
+      // (cards with `follow`), and how many rows the body had at the last draw (0 = it fit).
+      scrollTop: number;
+      stick: boolean;
+      overflow: number;
     }
     let entries: Entry[] = [];
     // Header row of each drawn card (for clicks) and the rows of its body (for forwarding mouse input).
-    let headerRows: { row: number; card: number; bodyRows: number }[] = [];
+    let headerRows: { row: number; card: number; bodyRows: number; open: boolean }[] = [];
     // Scrolling. `scroll` is the first content row in view; the rest is set on every render.
     let scroll = 0;
     let viewRows = 0; // rows the pane occupies on screen
@@ -388,16 +400,10 @@ export default async function (pi: ExtensionAPI) {
     // ---- the file viewer ------------------------------------------------------------------------
     // Opening a file splits the main area: the viewer on top, the chat below (see composeDock).
 
-    let chatLarge = false;
     const viewer: Viewer = createViewer(
       {
         theme: () => ctx.ui.theme,
         requestRender: () => requestRender?.(),
-        chatLarge: () => chatLarge,
-        toggleChat: () => {
-          chatLarge = !chatLarge;
-          requestRender?.();
-        },
         close: () => closeFile(),
         notify: (message, level) => ctx.ui.notify(message, level),
         askComment: (title, initial) => (initial === undefined ? ctx.ui.input(title, "") : ctx.ui.editor(title, initial)),
@@ -408,8 +414,47 @@ export default async function (pi: ExtensionAPI) {
     );
     activeViewer = viewer;
 
-    // Rows the chat gets while a file is open: a few lines, or about half the window.
-    const chatRows = (windowRows: number) => Math.max(8, Math.min(chatLarge ? Math.floor(windowRows * 0.55) : 11, windowRows - 8));
+    // Rows the chat gets while a file is open, out of `windowRows`: what is left under the viewer's
+    // height (set by dragging, or "viewerHeight" in side-pane.json), 11 rows when nothing is set.
+    // Both always keep at least MIN_PART_ROWS.
+    const MIN_PART_ROWS = 8;
+    let draggedViewerRows: number | undefined; // while a drag is going on
+    let windowRows = 0; // the height the main area had at the last layout pass
+    const chatRows = (height: number) => {
+      windowRows = height;
+      const h = config.viewerHeight;
+      const viewerRows = draggedViewerRows ?? (h === undefined ? undefined : typeof h === "number" ? h : Math.floor((height * parseFloat(h)) / 100));
+      const wanted = viewerRows === undefined ? 11 : height - viewerRows;
+      return Math.max(MIN_PART_ROWS, Math.min(wanted, height - MIN_PART_ROWS));
+    };
+
+    // The chat box's top edge is the handle between the viewer and the chat: press and drag it.
+    let chatGrab: { rows: number } | undefined;
+    const chatEdgeMouse = (event: any) => {
+      if (event.button !== "left") return undefined;
+      if (event.type === "press") {
+        chatGrab = { rows: chatEntry?.basis === undefined || chatEntry.basis === "auto" ? 11 : chatEntry.basis };
+        return { handled: true, capture: true, render: true };
+      }
+      if (!chatGrab) return undefined;
+      if (event.type === "drag") {
+        // While a drag is captured, y stays measured from the edge's row at the press: negative above it.
+        draggedViewerRows = windowRows - (chatGrab.rows - event.y);
+        return { handled: true, render: true };
+      }
+      if (event.type === "release" || event.type === "click") {
+        chatGrab = undefined;
+        if (draggedViewerRows !== undefined) {
+          const viewerRows = windowRows - chatRows(windowRows); // what the drag came to, after the limits
+          draggedViewerRows = undefined;
+          config.viewerHeight = `${Math.ceil((viewerRows / windowRows) * 10000) / 100}%`;
+          const error = saveLayout({ viewerHeight: config.viewerHeight });
+          if (error) ctx.ui.notify(error, "warning");
+        }
+        return { handled: true, render: true };
+      }
+      return undefined;
+    };
 
     function openFile(path: string) {
       if (layoutMode !== "dock") return void ctx.ui.notify("The file viewer needs pi's fullscreen mode.", "warning");
@@ -455,7 +500,15 @@ export default async function (pi: ExtensionAPI) {
         const message = e instanceof Error ? e.message : String(e);
         card = noteCard(cfg.type, (theme, width) => [theme.fg("error", truncateToWidth(`card error: ${message}`, width, "…"))]);
       }
-      return { cfg, card, collapsed: cfg.collapsed === true, dispose: () => subscriptions.forEach((off) => off()) };
+      return {
+        cfg,
+        card,
+        collapsed: cfg.collapsed === true,
+        dispose: () => subscriptions.forEach((off) => off()),
+        scrollTop: 0,
+        stick: card.follow === true,
+        overflow: 0,
+      };
     }
 
     // A card is someone else's code: when it throws, show that instead of breaking the whole pane.
@@ -469,7 +522,8 @@ export default async function (pi: ExtensionAPI) {
 
     // The header is always the first row. Open: a box. Collapsed: that one row, closed with ├ ┤.
     // `bodyRows`, for a card with "fill", is the exact number of body rows it is given.
-    function frame(card: Card, isCollapsed: boolean, width: number, theme: Theme, bodyRows?: number): string[] {
+    function frame(entry: Entry, width: number, theme: Theme, bodyRows?: number): string[] {
+      const { card, collapsed: isCollapsed } = entry;
       const border = (s: string) => theme.fg("border", s);
       const inner = Math.max(1, width - 4);
 
@@ -495,13 +549,29 @@ export default async function (pi: ExtensionAPI) {
       if (isCollapsed) return out;
 
       let body = guard(() => card.render(inner, theme, bodyRows), [theme.fg("error", "card error: it could not be drawn")]);
+      // Taller than its rows: a window of it, with a scrollbar in the right border.
+      let thumb: [number, number] | undefined; // first and last body row of the thumb
+      entry.overflow = 0;
       if (bodyRows !== undefined) {
-        body = body.slice(0, bodyRows);
-        while (body.length < bodyRows) body.push("");
+        const total = body.length;
+        if (total > bodyRows) {
+          const maxTop = total - bodyRows;
+          const top = card.follow === true && entry.stick ? maxTop : Math.max(0, Math.min(entry.scrollTop, maxTop));
+          entry.scrollTop = top;
+          entry.overflow = total;
+          const size = Math.max(1, Math.round((bodyRows * bodyRows) / total));
+          const at = maxTop === 0 ? 0 : Math.round((top / maxTop) * (bodyRows - size));
+          thumb = [at, at + size - 1];
+          body = body.slice(top, top + bodyRows);
+        } else {
+          entry.scrollTop = 0;
+          while (body.length < bodyRows) body.push("");
+        }
       }
-      for (const line of body) {
-        out.push(border("│") + " " + truncateToWidth(line, inner, "…", true) + " " + border("│"));
-      }
+      body.forEach((line, i) => {
+        const bar = thumb && i >= thumb[0] && i <= thumb[1] ? theme.fg("accent", "┃") : border("│");
+        out.push(border("│") + " " + truncateToWidth(line, inner, "…", true) + " " + bar);
+      });
       out.push(border("╰" + "─".repeat(Math.max(0, width - 2)) + "╯"));
       return out;
     }
@@ -512,27 +582,44 @@ export default async function (pi: ExtensionAPI) {
     // (see the scrolling notes at the top of the file).
     function renderPane(width: number, room: number, theme: Theme): string[] {
       const lines: string[] = [];
-      const headers: { row: number; card: number; bodyRows: number }[] = []; // in content rows
+      const headers: { row: number; card: number; bodyRows: number; open: boolean }[] = []; // in content rows
 
-      // Every drawn card at its natural size first.
+      // Every drawn card at its natural size first. A card with its own height (set by dragging, or
+      // "height" in side-pane.json) is drawn at that size, unless it has "fill".
       const order = drawn();
-      const frames = order.map((i) => frame(entries[i].card, entries[i].collapsed, width, theme));
+      const isFill = (i: number) => entries[i].cfg.fill === true && !entries[i].collapsed;
+      const own = (i: number) => (typeof entries[i].cfg.height === "number" ? (entries[i].cfg.height as number) : undefined);
+      const frames = order.map((i) =>
+        !isFill(i) && !entries[i].collapsed && own(i) !== undefined ? frame(entries[i], width, theme, own(i)) : frame(entries[i], width, theme),
+      );
 
-      // Rows left over go, evenly, to the open cards with "fill" (the first ones get the odd rows).
-      // A collapsed card is one row and never grows. With no free rows, nothing changes.
-      const used = frames.reduce((n, f) => n + f.length, 0);
-      const fillers = order.flatMap((i, k) => (entries[i].cfg.fill === true && !entries[i].collapsed ? [k] : []));
-      const free = room - used;
-      if (free > 0 && fillers.length > 0) {
-        fillers.forEach((k, n) => {
-          const extra = Math.floor(free / fillers.length) + (n < free % fillers.length ? 1 : 0);
-          const i = order[k];
-          frames[k] = frame(entries[i].card, false, width, theme, frames[k].length - 2 + extra);
-        });
+      const fillers = order.flatMap((i, k) => (isFill(i) ? [k] : []));
+      if (fillers.some((k) => own(order[k]) !== undefined)) {
+        // Some fill cards have been sized: their heights are shares of what the fixed cards leave.
+        const fixed = frames.reduce((n, f, k) => (fillers.includes(k) ? n : n + f.length), 0);
+        const avail = Math.max(fillers.length * 3, room - fixed - fillers.length * 2); // body rows to share
+        const known = fillers.map((k) => own(order[k])).filter((h): h is number => h !== undefined);
+        const mean = known.reduce((n, h) => n + h, 0) / known.length;
+        const weights = fillers.map((k) => own(order[k]) ?? mean);
+        const sum = weights.reduce((n, w) => n + w, 0);
+        const rows = weights.map((w) => Math.max(3, Math.floor((avail * w) / sum)));
+        let left = avail - rows.reduce((n, r) => n + r, 0);
+        for (let n = 0; left > 0 && n < rows.length; n = (n + 1) % rows.length, left--) rows[n]++;
+        fillers.forEach((k, n) => (frames[k] = frame(entries[order[k]], width, theme, rows[n])));
+      } else {
+        // Rows left over go, evenly, to the open cards with "fill" (the first ones get the odd rows).
+        // A collapsed card is one row and never grows. With no free rows, nothing changes.
+        const free = room - frames.reduce((n, f) => n + f.length, 0);
+        if (free > 0 && fillers.length > 0) {
+          fillers.forEach((k, n) => {
+            const extra = Math.floor(free / fillers.length) + (n < free % fillers.length ? 1 : 0);
+            frames[k] = frame(entries[order[k]], width, theme, frames[k].length - 2 + extra);
+          });
+        }
       }
 
       order.forEach((i, position) => {
-        headers.push({ row: lines.length, card: i, bodyRows: entries[i].collapsed ? 0 : frames[position].length - 2 });
+        headers.push({ row: lines.length, card: i, bodyRows: entries[i].collapsed ? 0 : frames[position].length - 2, open: !entries[i].collapsed });
         lines.push(...frames[position]);
       });
 
@@ -559,13 +646,82 @@ export default async function (pi: ExtensionAPI) {
       if (above > 0) view[0] = note("▲", above + 1);
       if (below > 0) view[room - 1] = note("▼", below + 1);
       headerRows = headers
-        .map((h) => ({ row: h.row - scroll, card: h.card, bodyRows: h.bodyRows }))
+        .map((h) => ({ row: h.row - scroll, card: h.card, bodyRows: h.bodyRows, open: h.open }))
         .filter((h) => h.row >= (above > 0 ? 1 : 0) && h.row < room - (below > 0 ? 1 : 0));
       return view;
     }
 
+    // Resizing by dragging a card's top or bottom edge (cards with "resizable": true). `start` holds
+    // the body rows of every open card when the press happened.
+    const MIN_BODY_ROWS = 3;
+    let drag: { card: number; edge: "top" | "bottom"; y0: number; start: Map<number, number>; moved: boolean } | undefined;
+    let swallowClick = false; // the click that follows a drag's release is not a click on the header
+
+    function resize(d: NonNullable<typeof drag>, dy: number) {
+      const grow = d.edge === "top" ? -dy : dy; // dragging the top edge up, or the bottom edge down, adds rows
+      const entry = entries[d.card];
+      const startOf = (i: number) => d.start.get(i) ?? (typeof entries[i].cfg.height === "number" ? (entries[i].cfg.height as number) : MIN_BODY_ROWS);
+      if (entry.cfg.fill !== true) {
+        entry.cfg.height = Math.max(MIN_BODY_ROWS, Math.min(300, startOf(d.card) + grow));
+        return;
+      }
+      // A fill card takes its rows from the nearest fill card on the other side of the edge.
+      const fillers = drawn().filter((i) => entries[i].cfg.fill === true && !entries[i].collapsed);
+      const at = fillers.indexOf(d.card);
+      const partner = fillers[d.edge === "top" ? at - 1 : at + 1];
+      if (partner === undefined || at < 0) return;
+      for (const i of fillers) entries[i].cfg.height = startOf(i); // from now on their heights are shares
+      const sx = startOf(d.card);
+      const sp = startOf(partner);
+      const g = Math.max(MIN_BODY_ROWS - sx, Math.min(grow, sp - MIN_BODY_ROWS));
+      entry.cfg.height = sx + g;
+      entries[partner].cfg.height = sp - g;
+    }
+
+    function saveSizes() {
+      const error = saveCards(entries.map((e) => e.cfg));
+      if (error) ctx.ui.notify(error, "warning");
+    }
+
     // Mouse input, with x and y local to the container. `bodyX` is where a card's body starts in x.
     function paneMouse(event: { type: string; button: string; x?: number; y: number; wheelDelta?: number }, bodyX = 0) {
+      if (drag) {
+        if (event.type === "drag") {
+          if (event.y !== drag.y0) drag.moved = true;
+          resize(drag, event.y - drag.y0);
+          return { handled: true, render: true };
+        }
+        if (event.type === "release" || event.type === "click") {
+          const d = drag;
+          drag = undefined;
+          swallowClick = true;
+          if (d.moved) saveSizes();
+          else if (d.edge === "top") entries[d.card].collapsed = !entries[d.card].collapsed; // it was a click on the header
+          return { handled: true, render: true };
+        }
+        return { handled: true };
+      }
+      if (event.type === "press") swallowClick = false;
+      if (event.type === "click" && swallowClick) {
+        swallowClick = false;
+        return { handled: true };
+      }
+      if (event.type === "press" && event.button === "left") {
+        const edge = headerRows.find(
+          (h) => h.open && entries[h.card].cfg.resizable === true && (event.y === h.row || event.y === h.row + h.bodyRows + 1),
+        );
+        if (edge) {
+          drag = {
+            card: edge.card,
+            edge: event.y === edge.row ? "top" : "bottom",
+            y0: event.y,
+            start: new Map(headerRows.filter((h) => h.open).map((h) => [h.card, h.bodyRows])),
+            moved: false,
+          };
+          return { handled: true, capture: true, render: true };
+        }
+      }
+
       // Over a card's body: the card gets the event first (a file tree scrolls and opens files).
       const over = headerRows.find((h) => event.y > h.row && event.y <= h.row + h.bodyRows);
       if (over) {
@@ -582,6 +738,15 @@ export default async function (pi: ExtensionAPI) {
           undefined,
         );
         if (result?.handled) return { handled: true, render: true };
+        // A body taller than its rows scrolls with the wheel (and does not hand the wheel on at its ends).
+        const entry = entries[over.card];
+        if (event.type === "wheel" && entry.overflow > 0) {
+          const delta = Math.max(-6, Math.min(6, Math.round(event.wheelDelta ?? 0)));
+          const maxTop = entry.overflow - over.bodyRows;
+          entry.scrollTop = Math.max(0, Math.min(maxTop, entry.scrollTop + delta));
+          if (entry.card.follow === true) entry.stick = entry.scrollTop >= maxTop;
+          return { handled: true, render: true };
+        }
       }
       if (event.type === "wheel") {
         // Not overflowing, or already at the end: unhandled, so the chat scrolls instead.
@@ -613,9 +778,12 @@ export default async function (pi: ExtensionAPI) {
     let layoutMode: "dock" | "overlay" | undefined;
     let warnedLayout = false;
 
-    // How many columns the dock takes of a terminal `total` columns wide.
+    // How many columns the dock takes of a terminal `total` columns wide. The width the user set by
+    // dragging the pane's left edge wins over the configured one, for the rest of the session.
+    let draggedWidth: number | undefined;
+    let dockCols = 0; // the width the dock has right now
     const dockWidth = (total: number) => {
-      const wanted = typeof config.width === "number" ? config.width : Math.floor((total * parseFloat(config.width)) / 100);
+      const wanted = draggedWidth ?? (typeof config.width === "number" ? config.width : Math.floor((total * parseFloat(config.width)) / 100));
       return Math.max(config.minWidth, Math.min(wanted, total - MIN_CHAT_COLUMNS));
     };
 
@@ -624,12 +792,48 @@ export default async function (pi: ExtensionAPI) {
     function dockVisible(viewport: { width: number }): boolean {
       const show = enabled && viewport.width >= config.minTerminalWidth && drawn().length > 0;
       const cols = show ? dockWidth(viewport.width) : 0;
+      dockCols = cols;
       if (dockEntry && show) {
         dockEntry.basis = cols;
         dockEntry.minSize = cols;
         dockEntry.maxSize = cols;
       }
       return show;
+    }
+
+    // Mouse input over the dock. Its left edge (the blank column and the cards' left border) is a
+    // handle: press there and drag to make the pane wider or narrower. Everything else is the pane's.
+    const GRAB_COLUMNS = 2;
+    let grab: number | undefined; // the column of the handle that was pressed, while dragging
+    let grabCols = 0; // the dock's width when it was pressed
+    function dockMouse(event: any) {
+      const x = event.x ?? 0;
+      if (event.button === "left" && event.type === "press" && x >= 0 && x < GRAB_COLUMNS) {
+        grab = x;
+        grabCols = dockCols;
+        return { handled: true, capture: true, render: true };
+      }
+      if (grab !== undefined && event.type === "drag") {
+        // While a drag is captured, `x` stays measured from where the dock's left edge was at the
+        // press (negative: the pointer is left of it), however the dock has moved since.
+        const total = tuiRef?.terminal?.columns || process.stdout.columns || 120;
+        const wanted = grabCols - (x - grab);
+        draggedWidth = Math.max(config.minWidth, Math.min(wanted, total - MIN_CHAT_COLUMNS));
+        return { handled: true, render: true };
+      }
+      if (grab !== undefined && (event.type === "release" || event.type === "click")) {
+        grab = undefined;
+        if (draggedWidth !== undefined) {
+          // Keep it as a percentage, rounded up so the same width comes back at this terminal size.
+          const total = tuiRef?.terminal?.columns || process.stdout.columns || 120;
+          config.width = `${Math.ceil((draggedWidth / total) * 10000) / 100}%`;
+          draggedWidth = undefined;
+          const error = saveLayout({ width: config.width });
+          if (error) ctx.ui.notify(error, "warning");
+        }
+        return { handled: true, render: true };
+      }
+      return paneMouse(event, 3); // 1 gutter + frame + space
     }
 
     const dockView: Component = {
@@ -639,7 +843,7 @@ export default async function (pi: ExtensionAPI) {
         // left keeps the cards off the chat.
         return renderPane(Math.max(1, width - 1), rows, ctx.ui.theme).map((line) => " " + line);
       },
-      handleMouse: ((event: any) => paneMouse(event, 3)) as Component["handleMouse"], // 1 gutter + frame + space
+      handleMouse: ((event: any) => dockMouse(event)) as Component["handleMouse"],
       invalidate() {},
     };
 
@@ -669,7 +873,12 @@ export default async function (pi: ExtensionAPI) {
       const chatBox = box({
         theme,
         rows,
-        top: { render: (w) => [ruleLine(theme(), w, theme().fg("border", "─") + " " + theme().fg("accent", "Chat") + " ")], invalidate() {} },
+        top: {
+          render: (w) => [ruleLine(theme(), w, theme().fg("border", "─") + " " + theme().fg("accent", "Chat") + " ")],
+          // With a file open the top edge is the handle that resizes the viewer.
+          handleMouse: viewer.isOpen() ? chatEdgeMouse : undefined,
+          invalidate() {},
+        },
         body: ownBody ?? baseRoot!,
         ownSides: ownBody !== undefined,
       });

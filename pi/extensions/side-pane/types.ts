@@ -14,6 +14,12 @@ export interface CardConfig {
   // true = the card grows to take the free rows of the pane. When several open cards have it, they
   // share the free rows evenly.
   fill?: boolean;
+  // true = the card's top and bottom edges can be dragged to resize it. A card that is not
+  // resizable keeps the size its content (or "fill") gives it.
+  resizable?: boolean;
+  // The body height in rows, set by dragging and saved. For a "fill" card it is a share: the fill
+  // cards split the free rows in proportion to their heights.
+  height?: number;
   [option: string]: unknown;
 }
 
@@ -71,9 +77,13 @@ export interface Card {
   available?(): boolean;
   refresh(): Promise<void>;
   // Content lines for the given inner width; the pane draws the frame around them.
-  // `height` is only given to a card with "fill": the rows the pane gives its body. Use them if the
-  // card can show more (the pane pads the body, or cuts it, to exactly that many rows).
+  // `height` is only given to a card with "fill" or its own height (it was resized): the rows the
+  // pane gives its body. The pane pads a shorter body; a longer one scrolls (wheel, scrollbar), so
+  // a card can simply return everything it has when it gets a height.
   render(width: number, theme: Theme, height?: number): string[];
+  // Optional: true = when the body is taller than its rows and scrolled to the end, it stays at
+  // the end as content is added (until the user scrolls up). For streaming output.
+  follow?: boolean;
   // Optional: one line (may be styled) shown after the title while the card is collapsed.
   summary?(theme: Theme): string | undefined;
   // Optional: a short text shown after the title, dimmed, while the card is open (the folder a
