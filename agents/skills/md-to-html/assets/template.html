@@ -14,6 +14,7 @@
       if (t === "dark" || t === "light") d.setAttribute("data-theme", t);
       var s = parseFloat(localStorage.getItem("md-scale"));
       if (s >= 0.8 && s <= 1.6) d.style.setProperty("--scale", s);
+      if (localStorage.getItem("md-width") === "full") d.setAttribute("data-width", "full");
     } catch (e) {}
   })();
 </script>
@@ -125,6 +126,16 @@
     line-height: 1;
   }
   .js .toolbar { display: flex; }
+  .doc-title {
+    margin-right: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--fg);
+  }
   .group {
     display: inline-flex;
     align-items: stretch;
@@ -149,11 +160,13 @@
   .toolbar button:disabled { opacity: 0.35; cursor: default; }
   .toolbar button[aria-checked="true"] { background: var(--ctl-active-bg); color: var(--ctl-active-fg); }
   #fs-down, #fs-up { font-size: 1rem; font-weight: 600; }
+  #width-toggle { min-width: 5.5rem; }
   #fs-value { min-width: 3.4rem; font-variant-numeric: tabular-nums; }
 
   /* ---- content ---- */
   main { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; overflow-wrap: break-word; }
   @media (min-width: 700px) { main { padding-top: 3rem; } }
+  :root[data-width="full"] main { max-width: none; }
 
   main > :first-child { margin-top: 0; }
   p, ul, ol, blockquote, pre, table, details, .table-wrap { margin: 0 0 1.1em; }
@@ -273,10 +286,14 @@
 </head>
 <body>
 <nav class="toolbar" aria-label="Display settings">
+  <span class="doc-title" title="{{TITLE}}">{{TITLE}}</span>
   <div class="group" role="group" aria-label="Font size">
     <button type="button" id="fs-down" aria-label="Decrease font size" title="Decrease font size">&minus;</button>
     <button type="button" id="fs-value" aria-label="Reset font size" title="Reset font size">100%</button>
     <button type="button" id="fs-up" aria-label="Increase font size" title="Increase font size">+</button>
+  </div>
+  <div class="group" role="group" aria-label="Page width">
+    <button type="button" id="width-toggle" aria-pressed="false" title="Use the full width of the window">Full width</button>
   </div>
   <div class="group" role="radiogroup" aria-label="Color theme">
     <button type="button" role="radio" data-theme-choice="auto" aria-checked="true" title="Follow the system setting">Auto</button>
@@ -314,6 +331,22 @@
     up.addEventListener("click", function () { setScale(scale + STEP); });
     label.addEventListener("click", function () { setScale(1); });
     setScale(scale);
+
+    // ---- page width: column (default) / full ----
+    var widthBtn = document.getElementById("width-toggle");
+
+    function setWidth(full) {
+      if (full) root.setAttribute("data-width", "full");
+      else root.removeAttribute("data-width");
+      widthBtn.setAttribute("aria-pressed", String(full));
+      widthBtn.textContent = full ? "Column" : "Full width";
+      widthBtn.title = full ? "Go back to the centred column" : "Use the full width of the window";
+      store("md-width", full ? "full" : null);
+    }
+    widthBtn.addEventListener("click", function () {
+      setWidth(root.getAttribute("data-width") !== "full");
+    });
+    setWidth(root.getAttribute("data-width") === "full");
 
     // ---- theme: auto (system) / dark / light ----
     var choices = Array.prototype.slice.call(document.querySelectorAll("[data-theme-choice]"));

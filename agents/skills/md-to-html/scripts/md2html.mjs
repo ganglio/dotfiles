@@ -105,7 +105,7 @@ const template = readFileSync(templatePath, "utf8");
 const mermaid = hasMermaid ? readFileSync(mermaidSnippetPath, "utf8") : "";
 // Replacer functions: the content may contain "$&", "$1" and the like.
 const html = template
-  .replace("{{TITLE}}", () => escapeHtml(title))
+  .replaceAll("{{TITLE}}", () => escapeHtml(title))
   .replace("{{CONTENT}}", () => content)
   .replace("{{MERMAID}}", () => mermaid);
 
