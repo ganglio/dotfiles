@@ -15,6 +15,8 @@ export interface PaneConfig {
   // How tall the file viewer is while a file is open: rows, or a percentage of the window. Unset: the chat gets 11 rows.
   viewerHeight?: number | `${number}%`;
   hideFooter: boolean;
+  // Colour the file viewer's text by language.
+  syntaxHighlight: boolean;
   refreshSeconds: number;
   shortcut?: string;
   cards: CardConfig[];
@@ -28,6 +30,7 @@ const DEFAULT_CONFIG: PaneConfig = {
   maxHeight: "75%",
   minTerminalWidth: 110,
   hideFooter: true,
+  syntaxHighlight: true,
   refreshSeconds: 10,
   cards: [{ type: "git-log" }],
 };
@@ -60,6 +63,7 @@ export function loadConfig(): { config: PaneConfig; error?: string } {
         : problems.push('"layout" must be "auto", "dock" or "overlay"');
     }
     if (parsed.hideFooter !== undefined) typeof parsed.hideFooter === "boolean" ? (config.hideFooter = parsed.hideFooter) : problems.push('"hideFooter" must be true or false');
+    if (parsed.syntaxHighlight !== undefined) typeof parsed.syntaxHighlight === "boolean" ? (config.syntaxHighlight = parsed.syntaxHighlight) : problems.push('"syntaxHighlight" must be true or false');
     if (parsed.width !== undefined) isSize(parsed.width) ? (config.width = parsed.width) : problems.push('"width" must be a number or a percentage like "30%"');
     if (parsed.viewerHeight !== undefined) isSize(parsed.viewerHeight) ? (config.viewerHeight = parsed.viewerHeight) : problems.push('"viewerHeight" must be a number or a percentage like "60%"');
     if (parsed.maxHeight !== undefined) isSize(parsed.maxHeight) ? (config.maxHeight = parsed.maxHeight) : problems.push('"maxHeight" must be a number or a percentage like "75%"');

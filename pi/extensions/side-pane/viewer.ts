@@ -12,6 +12,7 @@
 //
 // Layout and wiring live in index.ts; the model (ranges, the prompt, applying edits) in review.ts.
 
+import { getLanguageFromPath, highlightCode } from "@earendil-works/pi-coding-agent";
 import type { Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import { ScrollView, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
@@ -35,6 +36,8 @@ class ContainedScrollView extends ScrollView {
 export interface ViewerHost {
   theme(): Theme;
   requestRender(): void;
+  // Whether to colour the file by its language.
+  syntax(): boolean;
   close(): void;
   notify(message: string, level: "info" | "warning" | "error"): void;
   // A dialog asking for a comment; resolves to the text, or undefined when cancelled.
@@ -47,6 +50,7 @@ export interface ViewerHost {
 
 const TAB = 4;
 const MAX_BYTES = 2_000_000;
+const MAX_HIGHLIGHT_LINES = 20_000; // longer files stay plain
 const MAX_PROPOSAL_ROWS = 12;
 
 // One cell of a displayed line: a character (or a tab, which spans several columns).
@@ -55,6 +59,87 @@ interface Cell {
   w: number; // columns
   idx: number; // index of the character in the line
   len: number; // characters it stands for (2 for a character outside the basic plane)
+  open?: string; // the syntax colour (escape codes) that starts it and the codes that end it
+  close?: string;
+}
+
+// ---- syntax highlighting -----------------------------------------------------------------------
+//
+// Pi's highlightCode() returns the file as lines of coloured text. Those lines are read back here,
+// character by character, into the style each source character has, so the viewer can keep drawing
+// cell by cell (selection, comment underline and line wrapping work on the same cells).
+
+interface Style {
+  open: string;
+  close: string;
+}
+
+// Files whose name says more than their extension (or that have none).
+const LANGUAGE_BY_NAME: Record<string, string> = {
+  dockerfile: "dockerfile",
+  makefile: "makefile",
+  zshrc: "bash",
+  bashrc: "bash",
+  bash_profile: "bash",
+  profile: "bash",
+  envrc: "bash",
+  vimrc: "vim",
+  gitconfig: "ini",
+};
+
+function languageOf(path: string): string | undefined {
+  const name = (path.split("/").pop() ?? "").toLowerCase().replace(/^\./, "");
+  return LANGUAGE_BY_NAME[name] ?? getLanguageFromPath(path);
+}
+
+// The style of each visible character (by code point) of a line of coloured text. Only what the
+// highlighter uses is followed: the foreground colour, bold, dim and italic.
+function readStyles(coloured: string): Style[] {
+  const out: Style[] = [];
+  let fg: string | undefined;
+  let bold = false;
+  let dim = false;
+  let italic = false;
+  let current: Style | undefined; // rebuilt when the state changes
+  const build = (): Style => {
+    const codes = [fg, bold ? "1" : undefined, dim ? "2" : undefined, italic ? "3" : undefined].filter((c): c is string => c !== undefined);
+    if (codes.length === 0) return { open: "", close: "" };
+    return {
+      open: `\x1b[${codes.join(";")}m`,
+      close: (fg ? "\x1b[39m" : "") + (bold || dim ? "\x1b[22m" : "") + (italic ? "\x1b[23m" : ""),
+    };
+  };
+  for (let k = 0; k < coloured.length; ) {
+    if (coloured[k] === "\x1b" && coloured[k + 1] === "[") {
+      const end = coloured.indexOf("m", k);
+      if (end < 0) break;
+      const params = coloured.slice(k + 2, end).split(";").map((p) => (p === "" ? 0 : Number(p)));
+      for (let p = 0; p < params.length; p++) {
+        const n = params[p];
+        if (n === 0) (fg = undefined), (bold = dim = italic = false);
+        else if (n === 1) bold = true;
+        else if (n === 2) dim = true;
+        else if (n === 3) italic = true;
+        else if (n === 22) bold = dim = false;
+        else if (n === 23) italic = false;
+        else if (n === 39) fg = undefined;
+        else if ((n >= 30 && n <= 37) || (n >= 90 && n <= 97)) fg = String(n);
+        else if (n === 38 || n === 48) {
+          // 38;5;n or 38;2;r;g;b: a foreground colour (kept), or a background (skipped)
+          const len = params[p + 1] === 5 ? 3 : params[p + 1] === 2 ? 5 : 1;
+          if (n === 38) fg = params.slice(p, p + len).join(";");
+          p += len - 1;
+        }
+      }
+      current = undefined;
+      k = end + 1;
+      continue;
+    }
+    const cp = coloured.codePointAt(k)!;
+    k += cp > 0xffff ? 2 : 1;
+    out.push((current ??= build()));
+  }
+  return out;
 }
 
 // A row of the content: a source line, or a part of a proposal block shown under a line.
@@ -81,6 +166,8 @@ export function createViewer(host: ViewerHost, cwd: string) {
   let head: number | undefined;
   let rows: Row[] = [];
   let cells: (Cell[] | undefined)[] = [];
+  // The highlighted file: the style of every character by line, built when the text or the theme changes.
+  let styled: { text: string; theme: Theme; lines: (Style[] | undefined)[] } | undefined;
   let scrollView: ScrollView | undefined;
 
   const theme = () => host.theme();
@@ -250,6 +337,27 @@ export function createViewer(host: ViewerHost, cwd: string) {
 
   // ---- drawing the content ---------------------------------------------------------------------
 
+  // Colours the file, once per text and theme. A file the highlighter does not know (or a very big
+  // one) stays plain.
+  function ensureStyles() {
+    const t = theme();
+    const lang = host.syntax() && !error && lines.length <= MAX_HIGHLIGHT_LINES ? languageOf(path) : undefined;
+    if (!lang) {
+      if (styled) cells = [];
+      styled = undefined;
+      return;
+    }
+    if (styled && styled.text === text && styled.theme === t) return;
+    cells = [];
+    let coloured: string[] = [];
+    try {
+      coloured = highlightCode(text, lang);
+    } catch {
+      // plain text is fine
+    }
+    styled = { text, theme: t, lines: coloured.map((l) => readStyles(l)) };
+  }
+
   // The cells of a line, cached: tabs become spaces up to the next tab stop.
   function cellsOf(i: number): Cell[] {
     const cached = cells[i];
@@ -257,20 +365,25 @@ export function createViewer(host: ViewerHost, cwd: string) {
     const line = lines[i] ?? "";
     const out: Cell[] = [];
     let col = 0;
+    // The style of each character, if the highlighter agrees with the file about the line.
+    let styles = styled?.text === text ? styled.lines[i] : undefined;
+    if (styles && styles.length !== Array.from(line).length) styles = undefined;
+    let n = 0; // the character's number in the line
     for (let k = 0; k < line.length; ) {
       const cp = line.codePointAt(k)!;
       const len = cp > 0xffff ? 2 : 1;
       if (line[k] === "\t") {
         const w = TAB - (col % TAB);
-        out.push({ text: " ".repeat(w), w, idx: k, len });
+        out.push({ text: " ".repeat(w), w, idx: k, len, open: styles?.[n].open, close: styles?.[n].close });
         col += w;
       } else {
         const ch = String.fromCodePoint(cp);
         const w = visibleWidth(ch);
-        out.push({ text: ch, w, idx: k, len });
+        out.push({ text: ch, w, idx: k, len, open: styles?.[n].open, close: styles?.[n].close });
         col += w;
       }
       k += len;
+      n++;
     }
     return (cells[i] = out);
   }
@@ -336,7 +449,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
     let acc = 0;
     for (const cell of cs.slice(row.from, row.to)) {
       const off = ls + cell.idx;
-      let s = cell.text;
+      let s = cell.open ? cell.open + cell.text + cell.close : cell.text;
       if (spans.some((c) => off >= c.start && off < c.end)) s = UNDERLINE[0] + s + UNDERLINE[1];
       if (sel && off >= sel.start && off < sel.end) s = INVERSE[0] + s + INVERSE[1];
       out += s;
@@ -434,6 +547,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
       if (error) return [t.fg("error", " " + error)];
       if (!isOpen()) return [t.fg("dim", " No file open.")];
       buttonHits = new Map();
+      ensureStyles();
       // Rows: every line, and under the last line of a comment its pending proposal.
       rows = [];
       const blocks = new Map<number, Comment[]>();

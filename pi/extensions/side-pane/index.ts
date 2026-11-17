@@ -78,6 +78,7 @@
 //     "minTerminalWidth": 110,      hide the pane when the terminal is narrower than this
 //     "hideFooter": true,           hide pi's own footer (model, folder, context). false = hide it
 //                                   only while the pane shows a "session" card, which has the same
+//     "syntaxHighlight": true,      colour the file viewer's text by language
 //     "refreshSeconds": 10,         how often the cards refresh (also after every agent turn)
 //     "shortcut": "ctrl+shift+g",   optional key that toggles the pane
 //     "cards": [ { "type": "git-log", "count": 3 }, { "type": "ollama", "enabled": false } ]
@@ -404,6 +405,7 @@ export default async function (pi: ExtensionAPI) {
       {
         theme: () => ctx.ui.theme,
         requestRender: () => requestRender?.(),
+        syntax: () => config.syntaxHighlight,
         close: () => closeFile(),
         notify: (message, level) => ctx.ui.notify(message, level),
         askComment: (title, initial) => (initial === undefined ? ctx.ui.input(title, "") : ctx.ui.editor(title, initial)),
