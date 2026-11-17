@@ -2,7 +2,7 @@
 # Links the AI agents configuration from the dotfiles into the places the
 # agents read from. Safe to re-run: run it again after adding or removing a skill.
 #
-#   pi/models.json, pi/settings.json, pi/pi-jefferson.json, pi/side-pane.json -> ~/.pi/agent/
+#   pi/models.json, pi/settings.json, pi/side-pane.json -> ~/.pi/agent/
 #   pi/extensions/<file>             -> ~/.pi/agent/extensions/<file>  (one by one: other
 #                                       tools put their own files in that folder)
 #   pi/extensions/<dir>/ (with an index.ts) -> ~/.pi/agent/extensions/<dir>  (the whole folder
@@ -29,7 +29,7 @@ link() {
 }
 
 echo "Linking pi configuration"
-for f in models.json settings.json pi-jefferson.json side-pane.json; do
+for f in models.json settings.json side-pane.json; do
 	link "$dotfiles/pi/$f" "$HOME/.pi/agent/$f"
 done
 

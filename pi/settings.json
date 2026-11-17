@@ -9,7 +9,6 @@
   "enableAnalytics": false,
   "enableInstallTelemetry": false,
   "lastChangelogVersion": "1.5.2",
-  "packages": [
-    "npm:pi-jefferson@0.10.2"
-  ]
+  "packages": [],
+  "editorPaddingX": 1
 }
