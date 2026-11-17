@@ -3,7 +3,7 @@
 import { visibleWidth } from "@earendil-works/pi-tui";
 import type { CardEnv } from "./types";
 
-// The same marks the footer's git status uses.
+// The git marks of the session card and the working tree card.
 export const STAGED = "✚"; // ✚
 export const UNSTAGED = "●"; // ●
 export const UNTRACKED = "?";

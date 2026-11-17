@@ -12,6 +12,7 @@ export interface PaneConfig {
   minWidth: number;
   maxHeight: number | `${number}%`;
   minTerminalWidth: number;
+  hideFooter: boolean;
   refreshSeconds: number;
   shortcut?: string;
   cards: CardConfig[];
@@ -24,6 +25,7 @@ const DEFAULT_CONFIG: PaneConfig = {
   minWidth: 34,
   maxHeight: "75%",
   minTerminalWidth: 110,
+  hideFooter: true,
   refreshSeconds: 10,
   cards: [{ type: "git-log" }],
 };
@@ -55,6 +57,7 @@ export function loadConfig(): { config: PaneConfig; error?: string } {
         ? (config.layout = parsed.layout)
         : problems.push('"layout" must be "auto", "dock" or "overlay"');
     }
+    if (parsed.hideFooter !== undefined) typeof parsed.hideFooter === "boolean" ? (config.hideFooter = parsed.hideFooter) : problems.push('"hideFooter" must be true or false');
     if (parsed.width !== undefined) isSize(parsed.width) ? (config.width = parsed.width) : problems.push('"width" must be a number or a percentage like "30%"');
     if (parsed.maxHeight !== undefined) isSize(parsed.maxHeight) ? (config.maxHeight = parsed.maxHeight) : problems.push('"maxHeight" must be a number or a percentage like "75%"');
     for (const key of ["minWidth", "minTerminalWidth"] as const) {

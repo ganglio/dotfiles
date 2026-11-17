@@ -14,11 +14,21 @@
       "fill": true
     },
     {
+      "type": "session",
+      "title": "Session"
+    },
+    {
+      "type": "files",
+      "title": "Files",
+      "fill": true
+    },
+    {
       "type": "git-log",
       "title": "Recent commits",
       "count": 3,
       "messageLines": 2,
-      "date": "relative"
+      "date": "relative",
+      "enabled": false
     },
     {
       "type": "git-status",

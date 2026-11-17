@@ -9,6 +9,8 @@
 // Files in this folder:
 //   index.ts       this file: the pane, its layout, commands and events
 //   cards/         one file per card type. Drop a file in, /reload, and it is a card (see below)
+//   viewer.ts      the file viewer: selection, comments, proposals (opened from the Files card or /file)
+//   review.ts      the review model behind it: ranges, the prompt for the agent, applying edits
 //   registry.ts    discovers the files in cards/
 //   config.ts      reads and writes side-pane.json
 //   config-ui.ts   the visual card editor, /pane config
@@ -30,8 +32,14 @@
 // top-right: it is drawn over the chat and does NOT shrink it (text under it is hidden).
 //
 // The pane hides itself on narrow terminals (minTerminalWidth), and `/pane` toggles it by hand.
-// When it is shown, other extensions are told its width through pi.events ("side-pane:dock"),
-// so the git hash line can stay out from under it.
+//
+// File viewer. The Files card (cards/files.ts) lists the working directory; clicking a file, or
+// /file <path>, splits the main area: the file above (viewer.ts), the chat below with a button to
+// make it larger. Drag over text to select it and comment on it; "Send" hands the selections, the
+// comments and the file's path to the agent, which answers each comment with the propose_edit
+// tool below instead of editing. The proposals show inline, and "Use edit" is the only thing that
+// writes the file. Needs the dock, so pi's fullscreen mode. /file close and /file send are the
+// keyboard routes. The model behind it (ranges, the prompt, applying edits) is in review.ts.
 //
 // Collapsing: every card has a caret at the top right of its header (▾ open, ▸ collapsed).
 // Click the header row to collapse or open the card (mouse needs pi's fullscreen mode, the
@@ -61,6 +69,8 @@
 //     "maxHeight": "75%",           rows, or a percentage of the terminal height (overlay only;
 //                                   the dock uses the whole height of the window)
 //     "minTerminalWidth": 110,      hide the pane when the terminal is narrower than this
+//     "hideFooter": true,           hide pi's own footer (model, folder, context). false = hide it
+//                                   only while the pane shows a "session" card, which has the same
 //     "refreshSeconds": 10,         how often the cards refresh (also after every agent turn)
 //     "shortcut": "ctrl+shift+g",   optional key that toggles the pane
 //     "cards": [ { "type": "git-log", "count": 3 }, { "type": "ollama", "enabled": false } ]
@@ -77,7 +87,8 @@
 
 import type { ExtensionAPI, ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
-import { HStack, VStack, isViewportTUI, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { HStack, isViewportTUI, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { Type } from "typebox";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, saveCards } from "./config";
@@ -85,7 +96,10 @@ import { createCardsEditor } from "./config-ui";
 import type { EditorRow } from "./config-ui";
 import { discoverCards } from "./registry";
 import type { CardType } from "./registry";
-import type { Card, CardConfig, CardEnv } from "./types";
+import type { Card, CardConfig, CardEnv, SessionInfo } from "./types";
+import { MeasurementSafeVStack, box, chatBody, ruleLine } from "./frame";
+import { createViewer } from "./viewer";
+import type { Viewer } from "./viewer";
 
 // ----------------------------------------------------------------------- pane
 
@@ -98,6 +112,10 @@ interface Pane {
   setAllCollapsed(collapsed: boolean): void;
   // The visual card editor (/pane config).
   configure(ctx: ExtensionCommandContext): Promise<void>;
+  // The file viewer (/file): open a file, close it, send the comments on it to the agent.
+  openFile(path: string): void;
+  closeFile(): void;
+  sendReview(): void;
   scroll(where: "up" | "down" | "top" | "bottom"): void;
   reload(): string | undefined; // returns a config error, if any
 }
@@ -106,21 +124,8 @@ const CARET_OPEN = "▾"; // ▾
 const CARET_CLOSED = "▸"; // ▸
 
 const WIDGET_KEY = "side-pane";
-// Other extensions (the git hash line) read the dock's width from here, and are told when it changes.
-const DOCK_KEY = Symbol.for("pi.side-pane.dock");
-const DOCK_EVENT = "side-pane:dock";
 // The chat keeps at least this many columns, whatever the pane's width settings say.
 const MIN_CHAT_COLUMNS = 50;
-
-// A stack whose own render() is a constant. The layout engine measures every child of a stack by
-// calling render(); for pi's root that would draw the whole chat a second time on every frame.
-// Real layout and painting go through the layout node, not through render(), so only the
-// throwaway measurement becomes cheap.
-class MeasurementSafeVStack extends VStack {
-  render(_width: number): string[] {
-    return [""];
-  }
-}
 
 export default async function (pi: ExtensionAPI) {
   // Every file in cards/ is a card type. Discovered once per load: /reload picks up new files.
@@ -143,6 +148,8 @@ export default async function (pi: ExtensionAPI) {
     "tool_execution_end",
     "tool_call",
     "tool_result",
+    "model_select",
+    "thinking_level_select",
   ];
   const listeners = new Map<string, Set<(event: any) => void>>();
   for (const name of CARD_EVENTS) {
@@ -163,7 +170,7 @@ export default async function (pi: ExtensionAPI) {
   let refreshAll: (() => Promise<void>) | undefined;
   let repaint: (() => void) | undefined;
   let teardown: (() => void) | undefined;
-  let dockCols = 0; // columns the dock takes right now (0 = no dock)
+  let activeViewer: Viewer | undefined; // the viewer of the running session, for the propose_edit tool
 
   function stop() {
     if (timer) clearInterval(timer);
@@ -242,6 +249,39 @@ export default async function (pi: ExtensionAPI) {
       else return void ctx.ui.notify(usage, "warning");
     },
   });
+  pi.registerCommand("file", {
+    description: "File viewer: /file <path> opens a file, /file close, /file send",
+    handler: async (args, ctx) => {
+      if (!pane) return void ctx.ui.notify("The file viewer runs in the interactive terminal UI only.", "warning");
+      const arg = (args ?? "").trim();
+      if (arg === "close") return void pane.closeFile();
+      if (arg === "send") return void pane.sendReview();
+      if (arg === "") return void ctx.ui.notify("Usage: /file <path> | close | send", "warning");
+      pane.openFile(resolve(ctx.cwd, arg));
+    },
+  });
+
+  // The agent's answer to a review comment. It changes nothing on disk: the viewer shows the
+  // proposal and the user decides between keeping the original and taking it.
+  pi.registerTool({
+    name: "propose_edit",
+    label: "Propose edit",
+    description:
+      "Propose a replacement for the text a user selected in a review comment. This does not change any file: the user chooses between keeping the original and your proposal.",
+    promptSnippet: "Propose a replacement for the text selected in a review comment",
+    parameters: Type.Object({
+      comment: Type.Number({ description: "The number of the comment this answers" }),
+      replacement: Type.String({ description: "The complete text that should replace exactly the selected text" }),
+      note: Type.Optional(Type.String({ description: "A short explanation of the change" })),
+    }),
+    async execute(_toolCallId, params) {
+      const text = activeViewer
+        ? activeViewer.propose(params.comment, params.replacement, params.note)
+        : "No review is open in the file viewer, so there is nothing to propose an edit for.";
+      return { content: [{ type: "text", text }], details: {} };
+    },
+  });
+
   if (first.shortcut) {
     pi.registerShortcut(first.shortcut, {
       description: "Toggle the side pane",
@@ -265,7 +305,8 @@ export default async function (pi: ExtensionAPI) {
       dispose: () => void; // drops the card's event subscriptions
     }
     let entries: Entry[] = [];
-    let headerRows: { row: number; card: number }[] = []; // header row of each drawn card, for clicks
+    // Header row of each drawn card (for clicks) and the rows of its body (for forwarding mouse input).
+    let headerRows: { row: number; card: number; bodyRows: number }[] = [];
     // Scrolling. `scroll` is the first content row in view; the rest is set on every render.
     let scroll = 0;
     let viewRows = 0; // rows the pane occupies on screen
@@ -313,6 +354,18 @@ export default async function (pi: ExtensionAPI) {
       touched,
       on() {}, // each card gets its own, see buildEntry
       repaint: () => coalescedRepaint(),
+      session: () => {
+        let context: SessionInfo["context"];
+        try {
+          const u = ctx.getContextUsage();
+          if (u) context = { tokens: u.tokens, window: u.contextWindow, percent: u.percent };
+        } catch {
+          // the session is gone
+        }
+        return { provider: ctx.model?.provider, model: ctx.model?.id, thinkingLevel: ctx.thinkingLevel as string | undefined, context };
+      },
+      openFile: (path) => openFile(path),
+      openedFile: () => (viewer.isOpen() ? viewer.path() : undefined),
       sessionEntries: () => {
         try {
           return ctx.sessionManager.getBranch() as unknown[];
@@ -330,6 +383,45 @@ export default async function (pi: ExtensionAPI) {
         repaintTimer = undefined;
         requestRender?.();
       }, 66);
+    }
+
+    // ---- the file viewer ------------------------------------------------------------------------
+    // Opening a file splits the main area: the viewer on top, the chat below (see composeDock).
+
+    let chatLarge = false;
+    const viewer: Viewer = createViewer(
+      {
+        theme: () => ctx.ui.theme,
+        requestRender: () => requestRender?.(),
+        chatLarge: () => chatLarge,
+        toggleChat: () => {
+          chatLarge = !chatLarge;
+          requestRender?.();
+        },
+        close: () => closeFile(),
+        notify: (message, level) => ctx.ui.notify(message, level),
+        askComment: (title, initial) => (initial === undefined ? ctx.ui.input(title, "") : ctx.ui.editor(title, initial)),
+        choose: (title, options) => ctx.ui.select(title, options),
+        send: (text) => pi.sendUserMessage(text, ctx.isIdle() ? undefined : { deliverAs: "followUp" }),
+      },
+      ctx.cwd,
+    );
+    activeViewer = viewer;
+
+    // Rows the chat gets while a file is open: a few lines, or about half the window.
+    const chatRows = (windowRows: number) => Math.max(8, Math.min(chatLarge ? Math.floor(windowRows * 0.55) : 11, windowRows - 8));
+
+    function openFile(path: string) {
+      if (layoutMode !== "dock") return void ctx.ui.notify("The file viewer needs pi's fullscreen mode.", "warning");
+      viewer.open(path);
+      composeDock(); // the viewer is part of the layout now
+      requestRender?.();
+    }
+
+    function closeFile() {
+      viewer.close();
+      composeDock();
+      requestRender?.();
     }
 
     // A card that only shows a message: a type nobody provides, or a factory that threw.
@@ -383,9 +475,16 @@ export default async function (pi: ExtensionAPI) {
 
       // header = cap ─ label ─────  caret  ─ cap   (7 columns of frame around label and fill)
       const room = Math.max(1, width - 7);
-      const summary = isCollapsed ? guard(() => card.summary?.(theme), undefined) : undefined;
+      // After the title: the card's summary while it is collapsed, its subtitle while it is open.
+      // The subtitle gets the columns the title leaves (" title · subtitle " around it).
+      const subRoom = room - visibleWidth(card.title) - 5;
+      const tail = isCollapsed
+        ? guard(() => card.summary?.(theme), undefined)
+        : subRoom >= 4
+          ? guard(() => card.subtitle?.(theme, subRoom), undefined)
+          : undefined;
       const label = truncateToWidth(
-        ` ${theme.fg("accent", card.title)}${summary ? theme.fg("dim", " · ") + summary : ""} `,
+        ` ${theme.fg("accent", card.title)}${tail ? theme.fg("dim", " · ") + tail : ""} `,
         room,
         "…",
       );
@@ -412,9 +511,8 @@ export default async function (pi: ExtensionAPI) {
     // Draws the cards into at most `room` rows. When they need more, it draws a window of them
     // (see the scrolling notes at the top of the file).
     function renderPane(width: number, room: number, theme: Theme): string[] {
-      const blank = " ".repeat(width); // every row is solid, so nothing shows through
       const lines: string[] = [];
-      const headers: { row: number; card: number }[] = []; // in content rows
+      const headers: { row: number; card: number; bodyRows: number }[] = []; // in content rows
 
       // Every drawn card at its natural size first.
       const order = drawn();
@@ -422,7 +520,7 @@ export default async function (pi: ExtensionAPI) {
 
       // Rows left over go, evenly, to the open cards with "fill" (the first ones get the odd rows).
       // A collapsed card is one row and never grows. With no free rows, nothing changes.
-      const used = frames.reduce((n, f) => n + f.length, 0) + Math.max(0, order.length - 1);
+      const used = frames.reduce((n, f) => n + f.length, 0);
       const fillers = order.flatMap((i, k) => (entries[i].cfg.fill === true && !entries[i].collapsed ? [k] : []));
       const free = room - used;
       if (free > 0 && fillers.length > 0) {
@@ -434,8 +532,7 @@ export default async function (pi: ExtensionAPI) {
       }
 
       order.forEach((i, position) => {
-        if (position > 0) lines.push(blank);
-        headers.push({ row: lines.length, card: i });
+        headers.push({ row: lines.length, card: i, bodyRows: entries[i].collapsed ? 0 : frames[position].length - 2 });
         lines.push(...frames[position]);
       });
 
@@ -462,13 +559,30 @@ export default async function (pi: ExtensionAPI) {
       if (above > 0) view[0] = note("▲", above + 1);
       if (below > 0) view[room - 1] = note("▼", below + 1);
       headerRows = headers
-        .map((h) => ({ row: h.row - scroll, card: h.card }))
+        .map((h) => ({ row: h.row - scroll, card: h.card, bodyRows: h.bodyRows }))
         .filter((h) => h.row >= (above > 0 ? 1 : 0) && h.row < room - (below > 0 ? 1 : 0));
       return view;
     }
 
-    // Mouse input, with y local to the pane.
-    function paneMouse(event: { type: string; button: string; y: number; wheelDelta?: number }) {
+    // Mouse input, with x and y local to the container. `bodyX` is where a card's body starts in x.
+    function paneMouse(event: { type: string; button: string; x?: number; y: number; wheelDelta?: number }, bodyX = 0) {
+      // Over a card's body: the card gets the event first (a file tree scrolls and opens files).
+      const over = headerRows.find((h) => event.y > h.row && event.y <= h.row + h.bodyRows);
+      if (over) {
+        const card = entries[over.card].card;
+        const result = guard(
+          () =>
+            card.handleMouse?.({
+              type: event.type,
+              button: event.button,
+              x: (event.x ?? 0) - bodyX,
+              y: event.y - over.row - 1,
+              wheelDelta: event.wheelDelta,
+            }),
+          undefined,
+        );
+        if (result?.handled) return { handled: true, render: true };
+      }
       if (event.type === "wheel") {
         // Not overflowing, or already at the end: unhandled, so the chat scrolls instead.
         const delta = Math.max(-6, Math.min(6, Math.round(event.wheelDelta ?? 0)));
@@ -495,6 +609,7 @@ export default async function (pi: ExtensionAPI) {
     let baseRoot: Component | undefined; // pi's own layout root
     let composedRoot: Component | undefined; // the root we installed (to notice when pi replaces it)
     let dockEntry: { basis?: number | "auto"; minSize?: number; maxSize?: number } | undefined;
+    let chatEntry: { basis?: number | "auto"; minSize?: number; maxSize?: number } | undefined; // the chat, while a file is open
     let layoutMode: "dock" | "overlay" | undefined;
     let warnedLayout = false;
 
@@ -503,13 +618,6 @@ export default async function (pi: ExtensionAPI) {
       const wanted = typeof config.width === "number" ? config.width : Math.floor((total * parseFloat(config.width)) / 100);
       return Math.max(config.minWidth, Math.min(wanted, total - MIN_CHAT_COLUMNS));
     };
-
-    function announceDock(cols: number) {
-      if (cols === dockCols) return;
-      dockCols = cols;
-      // Not from inside the layout pass: listeners (the git hash overlay) may ask for a repaint.
-      setTimeout(() => pi.events.emit(DOCK_EVENT, { cols }), 0);
-    }
 
     // The stack asks this on every layout pass. It also sets the dock's width: the entry is
     // given the same minimum, maximum and basis, so it is exactly `cols` wide.
@@ -521,7 +629,6 @@ export default async function (pi: ExtensionAPI) {
         dockEntry.minSize = cols;
         dockEntry.maxSize = cols;
       }
-      announceDock(cols);
       return show;
     }
 
@@ -532,9 +639,19 @@ export default async function (pi: ExtensionAPI) {
         // left keeps the cards off the chat.
         return renderPane(Math.max(1, width - 1), rows, ctx.ui.theme).map((line) => " " + line);
       },
-      handleMouse: paneMouse as Component["handleMouse"],
+      handleMouse: ((event: any) => paneMouse(event, 3)) as Component["handleMouse"], // 1 gutter + frame + space
       invalidate() {},
     };
+
+    function chatVisible(viewport: { height: number }): boolean {
+      if (chatEntry) {
+        const rows = chatRows(viewport.height);
+        chatEntry.basis = rows;
+        chatEntry.minSize = rows;
+        chatEntry.maxSize = rows;
+      }
+      return true;
+    }
 
     function composeDock(): boolean {
       const tui = tuiRef;
@@ -542,7 +659,32 @@ export default async function (pi: ExtensionAPI) {
       const current = (tui as any).layoutRoot as Component | undefined;
       if (!current) return false; // nothing to wrap
       if (current !== composedRoot) baseRoot = current; // pi's own root, or a fresh one after a mode switch
-      const left = new MeasurementSafeVStack([{ component: baseRoot!, basis: 0, grow: 1, shrink: 1, minSize: 1 }]);
+      // The left side: pi's own root (the chat) alone, or under the file viewer when a file is open.
+      let left: Component;
+      chatEntry = undefined;
+      // The chat is always in a box; with a file open it shares the main area with the file's box.
+      const theme = () => ctx.ui.theme;
+      const rows = () => tuiRef?.terminal?.rows || process.stdout.rows || 24;
+      const ownBody = chatBody(baseRoot!, theme, rows); // undefined: pi's root is not what we expect
+      const chatBox = box({
+        theme,
+        rows,
+        top: { render: (w) => [ruleLine(theme(), w, theme().fg("border", "─") + " " + theme().fg("accent", "Chat") + " ")], invalidate() {} },
+        body: ownBody ?? baseRoot!,
+        ownSides: ownBody !== undefined,
+      });
+      if (viewer.isOpen()) {
+        const fileBox = box({ theme, rows, top: viewer.title, body: viewer.scroll, bottom: viewer.bar, openRight: true });
+        const stack = new MeasurementSafeVStack([
+          { component: fileBox, basis: 0, grow: 1, shrink: 1, minSize: 4 },
+          // The chat gets a fixed number of rows, set on every layout pass from the window's height.
+          { component: chatBox, basis: 11, grow: 0, shrink: 0, minSize: 8, visible: chatVisible },
+        ]);
+        chatEntry = (stack as any).entries.find((e: { component: Component }) => e.component === chatBox);
+        left = stack;
+      } else {
+        left = new MeasurementSafeVStack([{ component: chatBox, basis: 0, grow: 1, shrink: 1, minSize: 1 }]);
+      }
       const stack = new HStack([
         { component: left, basis: 0, grow: 1, shrink: 1, minSize: 1 },
         { component: dockView, basis: 0, grow: 0, shrink: 0, minSize: 0, visible: dockVisible },
@@ -591,7 +733,7 @@ export default async function (pi: ExtensionAPI) {
           return {
             // Pi cuts an overlay off at maxHeight, so draw a window of the content and scroll that.
             render: (width: number) => renderPane(width, paneRows(), theme),
-            handleMouse: paneMouse,
+            handleMouse: (event: any) => paneMouse(event, 2), // frame + space
             invalidate() {},
           };
         },
@@ -631,6 +773,22 @@ export default async function (pi: ExtensionAPI) {
       mountOverlay();
     }
 
+    // Pi's footer is hidden (always, or while a session card carries what it shows).
+    let footerHidden = false;
+    function syncFooter() {
+      // With hideFooter off: only while the pane, with a session card, is on screen.
+      const want =
+        config.hideFooter ||
+        (enabled && (process.stdout.columns || 0) >= config.minTerminalWidth && drawn().some((i) => entries[i].cfg.type === "session"));
+      if (want === footerHidden) return;
+      footerHidden = want;
+      try {
+        ctx.ui.setFooter(want ? () => ({ render: () => [], invalidate() {} }) : undefined);
+      } catch {
+        // the session is already gone
+      }
+    }
+
     // Pi hands its TUI to a widget factory. The widget itself draws nothing; it is there to get the
     // TUI and to run heal() on every frame.
     function ensureWidget() {
@@ -641,6 +799,7 @@ export default async function (pi: ExtensionAPI) {
         return {
           render: () => {
             heal();
+            syncFooter();
             return [];
           },
           invalidate() {},
@@ -653,22 +812,20 @@ export default async function (pi: ExtensionAPI) {
     }
 
     teardown = () => {
+      viewer.close();
+      activeViewer = undefined;
       if (repaintTimer) clearTimeout(repaintTimer);
       repaintTimer = undefined;
       unmountOverlay();
       restoreRoot();
       try {
+        if (footerHidden) ctx.ui.setFooter(undefined);
+        footerHidden = false;
         ctx.ui.setWidget(WIDGET_KEY, undefined);
       } catch {
         // the session is already gone
       }
-      (globalThis as Record<symbol, unknown>)[DOCK_KEY] = undefined;
-      if (dockCols !== 0) {
-        dockCols = 0;
-        pi.events.emit(DOCK_EVENT, { cols: 0 });
-      }
     };
-    (globalThis as Record<symbol, unknown>)[DOCK_KEY] = { cols: () => dockCols };
 
     // The visual card editor (/pane config): switch cards on and off and reorder them, with the
     // pane following live behind the editor. Enter saves into side-pane.json, Esc undoes it all.
@@ -738,6 +895,7 @@ export default async function (pi: ExtensionAPI) {
       if (busy) return;
       busy = true;
       try {
+        viewer.reload(); // the open file may have changed on disk
         await Promise.allSettled(entries.filter((e) => e.cfg.enabled !== false).map((e) => e.card.refresh()));
         requestRender?.();
       } finally {
@@ -780,6 +938,9 @@ export default async function (pi: ExtensionAPI) {
         requestRender?.();
       },
       configure,
+      openFile,
+      closeFile,
+      sendReview: () => viewer.sendReview(),
       scroll(where) {
         const page = Math.max(1, Math.floor(viewRows / 2));
         if (where === "up") scrollBy(-page);
@@ -806,6 +967,7 @@ export default async function (pi: ExtensionAPI) {
     const path = (event.input as { path?: unknown } | undefined)?.path;
     if (typeof path !== "string") return;
     touch(path, Date.now());
+    activeViewer?.reload(); // the agent changed a file: the viewer shows it again if it is the open one
     repaint?.();
   });
   pi.on("session_shutdown", () => stop());

@@ -47,6 +47,10 @@ const card: CardFactory = (config, env) => {
     // Optional: shown after the title while the card is collapsed.
     summary: () => now,
 
+    // Optional: shown, dimmed, after the title while the card is open. `room` is how many columns
+    // it may use; fit the text into it (`truncateLeft` in ../helpers keeps the end of a path).
+    // subtitle: (theme, room) => theme.fg("muted", truncateLeft("~/some/folder", room)),
+
     // Optional: return false while a dependency is missing and the card is not drawn at all.
     // A card that has to probe something answers false until its first refresh() has finished.
     // available: () => ready,
@@ -75,6 +79,14 @@ render(width, theme, height) {
 
 `working tree`, `agent edits` and `thinking` do this.
 
+## Mouse input
+
+A card can implement `handleMouse(event)` to react to the mouse over its body. `x` and `y` are local
+to the body (0,0 is its first cell); `event.type` is `click`, `wheel` and so on, and a wheel event
+carries `wheelDelta`. Return `{ handled: true }` when you used the event. Anything you leave unhandled
+falls through to the pane (a wheel event scrolls the pane). `files.ts` uses it to open folders and
+files and to scroll its tree.
+
 ## What a card gets
 
 - `config`: its entry from `side-pane.json` (`type`, `title`, `collapsed`, `enabled` and whatever
@@ -84,7 +96,8 @@ render(width, theme, height) {
 - `env.cwd`: pi's working directory.
 - `env.touched`: the files the agent wrote or edited this session (absolute path to count and time).
 - `env.on(event, handler)`: subscribes to a pi event for as long as the card lives. You get the
-  same event object an extension would get from `pi.on`. Available events: `before_agent_start`
+  same event object an extension would get from `pi.on`. Available events: `model_select`,
+  `thinking_level_select`, `before_agent_start`
   (once per user prompt), `agent_start`, `agent_end`, `turn_start`, `turn_end`, `message_start`,
   `message_update` (every streamed token), `message_end`, `tool_execution_start`,
   `tool_execution_end`, `tool_call`, `tool_result`. A handler that throws is ignored, and the
@@ -93,6 +106,11 @@ render(width, theme, height) {
   to about 15 redraws a second, so calling it on every token is fine.
 - `env.sessionEntries()`: the current session branch, oldest first. Use it to rebuild state after
   `/reload` or a resume, as `thinking.ts` does.
+- `env.session()`: the model, thinking level and context use (`context.tokens/window/percent`) as pi's
+  footer showed them. Read it on every draw. `session.ts` is the example; it also listens to the
+  `model_select` and `thinking_level_select` events.
+- `env.openFile(path)` / `env.openedFile()`: opens a file in the file viewer (which splits the
+  main area, fullscreen mode only) and tells which file it shows. `files.ts` is the example.
 - `render(width, theme)`: `theme.fg("accent" | "muted" | "dim" | "success" | "warning" | "error", text)`.
   Use `truncateToWidth` / `visibleWidth` / `wrapTextWithAnsi` from `@earendil-works/pi-tui`: never
   rely on `string.length` for what lands on screen.

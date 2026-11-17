@@ -17,6 +17,16 @@ export interface CardConfig {
   [option: string]: unknown;
 }
 
+// Live facts about the pi session (see CardEnv.session).
+export interface SessionInfo {
+  provider?: string;
+  model?: string;
+  thinkingLevel?: string;
+  // Tokens in the context (null = unknown, e.g. right after a compaction), the model's window and
+  // the percentage used. undefined when pi does not know.
+  context?: { tokens: number | null; window: number; percent: number | null };
+}
+
 // What the pane hands to every card.
 export interface CardEnv {
   // Runs git in pi's working directory. undefined = failed (not a repository, no commits, ...).
@@ -35,6 +45,21 @@ export interface CardEnv {
   // The entries of the current session branch, oldest first (same data as
   // ctx.sessionManager.getBranch()). For rebuilding a card's state after /reload or a resume.
   sessionEntries(): unknown[];
+  // The model, thinking level and context use, as pi's footer showed them. Read it on every draw.
+  session(): SessionInfo;
+  // Opens a file in the file viewer, which splits the main area (pi's fullscreen mode only).
+  openFile(path: string): void;
+  // The absolute path of the file the viewer shows, if any.
+  openedFile(): string | undefined;
+}
+
+// A mouse event over a card's body, with x and y local to the body (0,0 = its first cell).
+export interface CardMouseEvent {
+  type: string; // "click" | "press" | "release" | "drag" | "wheel" | ...
+  button: string; // "left" | "middle" | "right" | "none"
+  x: number;
+  y: number;
+  wheelDelta?: number;
 }
 
 export interface Card {
@@ -51,6 +76,12 @@ export interface Card {
   render(width: number, theme: Theme, height?: number): string[];
   // Optional: one line (may be styled) shown after the title while the card is collapsed.
   summary?(theme: Theme): string | undefined;
+  // Optional: a short text shown after the title, dimmed, while the card is open (the folder a
+  // file browser shows, say). `room` is the number of columns available: fit the text into it.
+  subtitle?(theme: Theme, room: number): string | undefined;
+  // Optional: mouse input over the card's body (clicks, wheel). Return { handled: true } when the
+  // card used the event; a wheel event it does not handle scrolls the pane instead.
+  handleMouse?(event: CardMouseEvent): { handled?: boolean } | undefined;
 }
 
 // A card file's default export.

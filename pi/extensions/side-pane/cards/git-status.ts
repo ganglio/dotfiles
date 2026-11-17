@@ -1,4 +1,4 @@
-// Card: the files behind the footer's ✚ ● ? marks, with +added −removed line counts.
+// Card: the files behind the session card's ✚ ● ? marks, with +added −removed line counts.
 //
 // Options (side-pane.json): maxFiles (1-30, default 8), stats (false = no line counts), title.
 
@@ -127,7 +127,7 @@ const card: CardFactory = (config, env) => {
       return lines;
     },
 
-    // Collapsed: the branch and the same marks as the footer, with counts.
+    // Collapsed: the branch and the same marks as the session card, with counts.
     summary(theme) {
       if (!tree) return undefined;
       const marks: string[] = [];
