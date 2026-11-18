@@ -11,7 +11,7 @@
       "type": "thinking",
       "title": "Thinking",
       "maxLines": 10,
-      "height": 33,
+      "height": 20,
       "fill": true,
       "resizable": true
     },
@@ -22,7 +22,7 @@
     {
       "type": "files",
       "title": "Files",
-      "height": 14,
+      "height": 35,
       "fill": true,
       "resizable": true
     },
