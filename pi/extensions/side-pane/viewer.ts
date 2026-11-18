@@ -8,7 +8,10 @@
 //   │          ...    │ - const x = 1;
 //   │                 │ + const x = 2;
 //   │                 └ [ Keep original ] [ Use edit ]
-//   └ bar      1 comment · 1 to send            [ Send 1 ] [ ✕ Close ]
+//   └ bar      1 comment · 1 to send            [ Send 1 ] [ ✎ Edit ] [ ✕ Close ]
+//
+// [ ✎ Edit ] runs $VISUAL / $EDITOR in place of the text, inside the same box (embedded-editor.ts);
+// when the editor quits the file is read again and the comments stay on their text.
 //
 // Layout and wiring live in index.ts; the model (ranges, the prompt, applying edits) in review.ts.
 
@@ -18,6 +21,8 @@ import type { Component } from "@earendil-works/pi-tui";
 import { ScrollView, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
+import type { EmbeddedEditor } from "./embedded-editor";
+import { startEmbeddedEditor, tmuxAvailable } from "./embedded-editor";
 import { ruleLine } from "./frame";
 import type { Comment } from "./review";
 import { applyProposal, buildPrompt, describe, lineStarts, posOf, relocate, shiftAfterEdit } from "./review";
@@ -46,6 +51,13 @@ export interface ViewerHost {
   choose(title: string, options: string[]): Promise<string | undefined>;
   // Hands a message to the agent.
   send(text: string): void;
+  // Gives the keyboard to a component; undefined gives it back to whoever had it before.
+  focus(component: Component | undefined): void;
+  // Gives the keyboard back, but only if `component` still has it (a dialog may have taken it since).
+  release(component: Component): void;
+  // The rows the viewer's body has (the editor needs to know), and "the body is another component now".
+  bodyRows(): number;
+  layoutChanged(): void;
 }
 
 const TAB = 4;
@@ -169,6 +181,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
   // The highlighted file: the style of every character by line, built when the text or the theme changes.
   let styled: { text: string; theme: Theme; lines: (Style[] | undefined)[] } | undefined;
   let scrollView: ScrollView | undefined;
+  let editor: EmbeddedEditor | undefined; // $EDITOR running in place of the text, see startEditing
 
   const theme = () => host.theme();
   const isOpen = () => path !== "";
@@ -209,6 +222,9 @@ export function createViewer(host: ViewerHost, cwd: string) {
   }
 
   function close() {
+    const running = editor;
+    editor = undefined;
+    running?.stop();
     path = "";
     rel = "";
     comments.length = 0;
@@ -219,7 +235,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
 
   // The file may have changed on disk (the agent, an editor): read it again and keep the comments on their text.
   function reload(force = false) {
-    if (!isOpen()) return;
+    if (!isOpen() || editor) return; // while the editor runs, the file is its business
     let m = 0;
     try {
       m = statSync(path).mtimeMs;
@@ -231,6 +247,58 @@ export function createViewer(host: ViewerHost, cwd: string) {
     if (!load(path)) return;
     if (text !== before) relocate(text, comments);
     host.requestRender();
+  }
+
+  // ---- editing in $EDITOR ---------------------------------------------------------------------
+
+  const editorName = () => (process.env.VISUAL || process.env.EDITOR || "vi").trim().split(/\s+/)[0].split("/").pop() ?? "editor";
+
+  // The editor takes the place of the text in the viewer's box, in a terminal of its own.
+  function startEditing() {
+    if (!isOpen() || error || editor || !tmuxAvailable()) return;
+    const command = `${process.env.VISUAL || process.env.EDITOR || "vi"} '${path.replace(/'/g, "'\\''")}'`;
+    const e: EmbeddedEditor = startEmbeddedEditor({
+      command,
+      cwd,
+      rows: () => host.bodyRows(),
+      theme,
+      requestRender: () => host.requestRender(),
+      onExit: () => editorEnded(e),
+      onLeave: () => host.release(e),
+      onError: (message) => host.notify(message, "error"),
+      blocked: () => asking,
+    });
+    editor = e;
+    anchor = head = undefined;
+    host.layoutChanged();
+    host.focus(e);
+  }
+
+  // The editor ended (it quit, or it was closed): back to the text, as the editor left the file.
+  function editorEnded(e: EmbeddedEditor) {
+    if (editor !== e) return;
+    editor = undefined;
+    host.release(e); // only if the editor still has the keyboard: a dialog may have it
+    reload(true);
+    host.layoutChanged();
+  }
+
+  // True while the "close it?" question is open. The question has the keyboard: the editor must stay
+  // out of the way, and a second question must not open on top of the first.
+  let asking = false;
+
+  async function stopEditing() {
+    const e = editor;
+    if (!e || asking) return;
+    asking = true;
+    host.requestRender();
+    let choice: string | undefined;
+    try {
+      choice = await host.choose(`${editorName()} is still open`, ["Close it (changes it has not saved are lost)", "Keep editing"]);
+    } finally {
+      asking = false;
+    }
+    if (choice?.startsWith("Close") && editor === e) e.stop();
   }
 
   // ---- selection and comments ----------------------------------------------------------------
@@ -638,12 +706,13 @@ export function createViewer(host: ViewerHost, cwd: string) {
       if (!isOpen()) return [""];
       const info = error ? "" : t.fg("dim", ` · ${lines.length} line${lines.length === 1 ? "" : "s"}`);
       const stale = comments.some((c) => c.stale) ? t.fg("warning", " · some comments no longer match the file") : "";
-      return [ruleLine(t, width, t.fg("border", "─") + " " + t.bold(t.fg("accent", rel)) + info + stale + " ")];
+      const editing = editor ? t.fg("warning", ` · editing with ${editorName()}`) : "";
+      return [ruleLine(t, width, t.fg("border", "─") + " " + t.bold(t.fg("accent", rel)) + info + editing + stale + " ")];
     },
     invalidate() {},
   };
 
-  let barHits: { send?: [number, number]; close?: [number, number]; status?: [number, number] } = {};
+  let barHits: { send?: [number, number]; edit?: [number, number]; close?: [number, number]; status?: [number, number] } = {};
   const bar: Component = {
     render(width: number): string[] {
       const t = theme();
@@ -651,15 +720,17 @@ export function createViewer(host: ViewerHost, cwd: string) {
       const toSend = drafts().length;
       const toReview = pending().length;
       const parts: string[] = [];
-      if (comments.length === 0) parts.push("Drag over text to select it, then add a comment");
+      if (editor) parts.push(editor.focused ? `ctrl+] gives the keyboard back to the chat` : `click the editor to type in it`);
+      else if (comments.length === 0) parts.push("Drag over text to select it, then add a comment");
       else {
         parts.push(`${comments.length} comment${comments.length === 1 ? "" : "s"}`);
         if (toSend > 0) parts.push(`${toSend} to send`);
         if (toReview > 0) parts.push(`${toReview} proposal${toReview === 1 ? "" : "s"} to review (click here)`);
       }
       const status = " " + parts.join(" · ");
-      const buttons: { key: "send" | "close"; label: string; style: (s: string) => string }[] = [];
-      if (toSend > 0) buttons.push({ key: "send", label: `[ Send ${toSend} ]`, style: (s) => t.bold(t.fg("accent", s)) });
+      const buttons: { key: "send" | "edit" | "close"; label: string; style: (s: string) => string }[] = [];
+      if (toSend > 0 && !editor) buttons.push({ key: "send", label: `[ Send ${toSend} ]`, style: (s) => t.bold(t.fg("accent", s)) });
+      if (!error && tmuxAvailable()) buttons.push({ key: "edit", label: editor ? "[ ✕ Close editor ]" : "[ ✎ Edit ]", style: (s) => t.fg(editor ? "warning" : "muted", s) });
       buttons.push({ key: "close", label: "[ ✕ Close ]", style: (s) => t.fg("muted", s) });
       const rightW = buttons.reduce((n, b) => n + visibleWidth(b.label) + 1, 0);
       // The bar is the bottom edge of the viewer's box: a rule leads into the status, and the space
@@ -673,7 +744,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
         t.fg(toReview > 0 ? "warning" : "dim", statusText) +
         " " +
         t.fg("border", "─".repeat(Math.max(0, x - lead - statusW - 1)));
-      if (toReview > 0) barHits.status = [lead, lead + statusW];
+      if (toReview > 0 && !editor) barHits.status = [lead, lead + statusW];
       for (const b of buttons) {
         barHits[b.key] = [x, x + visibleWidth(b.label) - 1];
         line += b.style(b.label) + " ";
@@ -685,6 +756,7 @@ export function createViewer(host: ViewerHost, cwd: string) {
       if (event.type !== "click" || event.button !== "left") return undefined;
       const within = (r?: [number, number]) => !!r && event.x >= r[0] && event.x <= r[1];
       if (within(barHits.send)) sendReview();
+      else if (within(barHits.edit)) void (editor ? stopEditing() : startEditing());
       else if (within(barHits.close)) host.close();
       else if (within(barHits.status)) jumpToProposal();
       else return undefined;
@@ -696,6 +768,9 @@ export function createViewer(host: ViewerHost, cwd: string) {
   return {
     title: titleBar,
     scroll: scrollView,
+    // What the box shows: the text, or the editor.
+    body: (): Component => editor ?? scrollView!,
+    editing: () => editor !== undefined,
     bar,
     open,
     close,

@@ -45,6 +45,8 @@
 // tool below instead of editing. The proposals show inline, and "Use edit" is the only thing that
 // writes the file. Needs the dock, so pi's fullscreen mode. /file close and /file send are the
 // keyboard routes. The model behind it (ranges, the prompt, applying edits) is in review.ts.
+// The viewer's Edit button runs $VISUAL / $EDITOR in the viewer's box (embedded-editor.ts, through
+// tmux); ctrl+] hands the keyboard back to the chat while the editor keeps running.
 //
 // Collapsing: every card has a caret at the top right of its header (▾ open, ▸ collapsed).
 // Click the header row to collapse or open the card (mouse needs pi's fullscreen mode, the
@@ -105,6 +107,7 @@ import type { EditorRow } from "./config-ui";
 import { discoverCards } from "./registry";
 import type { CardType } from "./registry";
 import type { Card, CardConfig, CardEnv, SessionInfo } from "./types";
+import { tmuxAvailable } from "./embedded-editor";
 import { MeasurementSafeVStack, box, chatBody, ruleLine } from "./frame";
 import { createViewer } from "./viewer";
 import type { Viewer } from "./viewer";
@@ -304,6 +307,7 @@ export default async function (pi: ExtensionAPI) {
     const loaded = loadConfig();
     if (loaded.error && ctx.hasUI) ctx.ui.notify(loaded.error, "warning");
     if (ctx.hasUI) for (const message of discoveryErrors) ctx.ui.notify(`side-pane: ${message}`, "warning");
+    if (ctx.hasUI && !tmuxAvailable()) ctx.ui.notify("side-pane: tmux was not found, so the file viewer's Edit button is not shown. Install tmux to edit files in the viewer.", "error");
     let config = loaded.config;
     // One entry per card of the config, in order: its config, the live card and whether it is collapsed.
     interface Entry {
@@ -406,6 +410,29 @@ export default async function (pi: ExtensionAPI) {
         theme: () => ctx.ui.theme,
         requestRender: () => requestRender?.(),
         syntax: () => config.syntaxHighlight,
+        focus: (component) => {
+          const tui = tuiRef;
+          if (!tui) return;
+          // Remember who had the keyboard (pi's input) so it can be handed back.
+          if (component) {
+            if (!focusBefore) focusBefore = tui.getFocusedComponent?.() ?? null;
+            tui.setFocus(component);
+          } else if (focusBefore !== undefined) {
+            tui.setFocus(focusBefore);
+            focusBefore = undefined;
+          }
+        },
+        release: (component) => {
+          const tui = tuiRef;
+          if (!tui || tui.getFocusedComponent?.() !== component) return;
+          if (focusBefore !== undefined) tui.setFocus(focusBefore);
+          focusBefore = undefined;
+        },
+        bodyRows: () => Math.max(1, windowRows - chatRows(windowRows) - 2), // minus the box's top and bottom edges
+        layoutChanged: () => {
+          composeDock();
+          requestRender?.();
+        },
         close: () => closeFile(),
         notify: (message, level) => ctx.ui.notify(message, level),
         askComment: (title, initial) => (initial === undefined ? ctx.ui.input(title, "") : ctx.ui.editor(title, initial)),
@@ -429,6 +456,8 @@ export default async function (pi: ExtensionAPI) {
       const wanted = viewerRows === undefined ? 11 : height - viewerRows;
       return Math.max(MIN_PART_ROWS, Math.min(wanted, height - MIN_PART_ROWS));
     };
+
+    let focusBefore: Component | null | undefined; // who had the keyboard before the editor took it
 
     // The chat box's top edge is the handle between the viewer and the chat: press and drag it.
     let chatGrab: { rows: number } | undefined;
@@ -885,7 +914,7 @@ export default async function (pi: ExtensionAPI) {
         ownSides: ownBody !== undefined,
       });
       if (viewer.isOpen()) {
-        const fileBox = box({ theme, rows, top: viewer.title, body: viewer.scroll, bottom: viewer.bar, openRight: true });
+        const fileBox = box({ theme, rows, top: viewer.title, body: viewer.body(), bottom: viewer.bar, openRight: true });
         const stack = new MeasurementSafeVStack([
           { component: fileBox, basis: 0, grow: 1, shrink: 1, minSize: 4 },
           // The chat gets a fixed number of rows, set on every layout pass from the window's height.
