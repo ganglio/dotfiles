@@ -10,7 +10,7 @@ code and mermaid diagrams. Pages without a diagram make no external request and 
 offline. A sticky top bar has two controls:
 
 - font size: `−` / `+` buttons, with the current percentage (click it to reset), 80%–160%
-- theme: **Auto** (follows the system), **Dark**, **Light**
+- theme: **Auto** (follows the system), **Dark**, **Light**, in the Solarized palette (Solarized Light and Dark), code and diagrams included
 
 Both choices are remembered by the browser.
 

@@ -36,7 +36,19 @@
       mermaid.initialize({
         startOnLoad: false,
         securityLevel: "strict",
-        theme: isDark() ? "dark" : "default",
+        // Solarized, to match the page (the "base" theme takes its colours from themeVariables).
+        theme: "base",
+        themeVariables: isDark()
+          ? { darkMode: true, background: "#002b36", primaryColor: "#073642", primaryTextColor: "#93a1a1", primaryBorderColor: "#586e75",
+              secondaryColor: "#073642", tertiaryColor: "#002b36", lineColor: "#839496", textColor: "#93a1a1",
+              noteBkgColor: "#073642", noteTextColor: "#93a1a1", noteBorderColor: "#586e75", edgeLabelBackground: "#002b36",
+              pie1: "#268bd2", pie2: "#b58900", pie3: "#d33682", pie4: "#859900", pie5: "#2aa198", pie6: "#cb4b16", pie7: "#6c71c4", pie8: "#dc322f",
+              pieSectionTextColor: "#002b36", pieStrokeColor: "#002b36", pieOuterStrokeColor: "#586e75", pieTitleTextColor: "#93a1a1", pieLegendTextColor: "#93a1a1" }
+          : { darkMode: false, background: "#fdf6e3", primaryColor: "#eee8d5", primaryTextColor: "#586e75", primaryBorderColor: "#93a1a1",
+              secondaryColor: "#eee8d5", tertiaryColor: "#fdf6e3", lineColor: "#657b83", textColor: "#586e75",
+              noteBkgColor: "#eee8d5", noteTextColor: "#586e75", noteBorderColor: "#93a1a1", edgeLabelBackground: "#fdf6e3",
+              pie1: "#268bd2", pie2: "#b58900", pie3: "#d33682", pie4: "#859900", pie5: "#2aa198", pie6: "#cb4b16", pie7: "#6c71c4", pie8: "#dc322f",
+              pieSectionTextColor: "#002b36", pieStrokeColor: "#fdf6e3", pieOuterStrokeColor: "#93a1a1", pieTitleTextColor: "#586e75", pieLegendTextColor: "#586e75" },
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
       });
       for (var i = 0; i < nodes.length; i++) {
